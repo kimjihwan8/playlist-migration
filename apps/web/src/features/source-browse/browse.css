@@ -1,0 +1,189 @@
+.browse-card { margin-top: 14px; padding: 0; overflow: hidden; }
+
+/* 목록이 길어져 페이지 전체가 스크롤되므로, 선택 요약과 다음 버튼은 상단에 고정한다 */
+.browse-actions {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 30px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.browse-actions .summary { color: var(--text-muted); font-size: var(--text-sm); }
+.browse-actions .summary strong { color: var(--text); font-size: var(--text-md); }
+
+/* 상단 "전체 보관함" 줄 */
+.library-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.library-row .account-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  color: #fff;
+}
+.library-row .library-meta { flex: 1; min-width: 0; }
+.library-row strong { display: block; font-size: var(--text-md); }
+.library-row > .library-meta > span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.switch-account {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.switch-account:hover { color: var(--text); }
+
+.search-field { position: relative; width: 260px; flex: none; }
+.search-field > svg {
+  position: absolute;
+  top: 50%; left: 13px;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+.search-field input {
+  width: 100%;
+  height: 38px;
+  padding: 0 13px 0 36px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text);
+  font-size: var(--text-sm);
+}
+.search-field input::placeholder { color: var(--text-muted); }
+.search-field input:hover { border-color: #8a8b93; }
+.search-field input:focus { border-color: var(--accent); outline: none; }
+
+
+/* 라이브러리 / 재생목록 구분 헤더 */
+.tree-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 22px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.tree-section:first-child { border-top: 0; }
+.tree-section em { font-style: normal; letter-spacing: 0; }
+.tree-section .search-field { margin-left: auto; }
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 22px;
+  border-top: 1px solid var(--border-soft);
+  cursor: pointer;
+}
+.tree-section + .tree-row { border-top: 0; }
+.tree-row:hover { background: var(--surface-2); }
+.tree-row.picked { background: var(--accent-tint); }
+.tree-row.picked:hover { background: #33271a; }
+
+.tree-pick { border: 0; padding: 0; background: transparent; display: grid; place-items: center; border-radius: 6px; }
+.tree-cover {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px; height: 44px;
+  border-radius: 8px;
+  color: #ffffffdd;
+}
+.tree-meta { flex: 1; min-width: 0; }
+.tree-meta strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-md);
+  font-weight: 500;
+}
+.tree-meta > span { display: block; margin-top: 3px; color: var(--text-muted); font-size: var(--text-sm); }
+.tree-toggle { flex: none; display: grid; place-items: center; padding: 6px; color: var(--text-faint); }
+.tree-row:hover .tree-toggle { color: var(--text); }
+
+/* 펼친 곡 목록 */
+.track-list { border-top: 1px solid var(--border-soft); background: var(--bg); }
+.track-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 10px 22px 10px 60px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.track-row:hover { background: var(--surface-2); }
+.track-info { min-width: 0; flex: 1; }
+.track-info strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+.track-info > span {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+}
+.track-loading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 18px 22px 18px 60px;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.tree-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 48px;
+  color: var(--text-muted);
+  font-size: var(--text-md);
+}
+
+@media (max-width: 640px) {
+  .browse-card { margin-top: 24px; }
+  .tree-row, .library-row, .tree-section { padding-left: 16px; padding-right: 16px; }
+  .track-row, .track-loading { padding-left: 50px; padding-right: 16px; }
+  .browse-actions { flex-wrap: wrap; gap: 10px; }
+  .browse-actions .btn { flex: 1; }
+  .tree-section { flex-wrap: wrap; }
+  .tree-section .search-field { width: 100%; margin-left: 0; }
+}
