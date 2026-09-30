@@ -1,0 +1,46 @@
+/* 디자인 토큰 — 색/타이포의 단일 출처.
+   원칙: 색은 적게, 대비는 높게, 글로우·반투명 없음.
+   강조는 '흰 버튼'이 맡고, 앰버는 선택 상태에만 쓴다. */
+:root {
+  color-scheme: dark;
+
+  /* surface — 보라 기운 없는 중립 차콜 */
+  --bg: #0f1011;
+  --surface: #17181a;
+  --surface-2: #1e1f22;
+  --surface-3: #26272b;
+  --border: #303136;
+  --border-soft: #26272b;
+  /* 입력·체크박스처럼 "누를 수 있는 것"은 더 밝은 테두리를 써서 눈에 띄게 한다 */
+  --control-border: #5b5c64;
+  --control-bg: #202127;
+
+  /* text — bg 대비 각각 약 16:1 / 7:1 / 4.6:1 */
+  --text: #f4f4f5;
+  --text-muted: #a6a6ac;
+  --text-faint: #7b7b82;
+
+  /* accent — 선택/진행 상태 전용 */
+  --accent: #f0a63c;
+  --accent-dim: #c8862c;
+  --accent-tint: #2a2015;
+
+  /* semantic */
+  --success: #52c07d;
+  --success-tint: #14291d;
+  --danger: #ef7161;
+  --danger-tint: #2e1a17;
+
+  /* shape */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 99px;
+
+  /* type scale */
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+}
