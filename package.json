@@ -1,0 +1,9 @@
+{
+  "name": "playlist-migration",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "build:web": "pnpm --filter web build",
+    "typecheck": "pnpm -r typecheck"
+  }
+}
