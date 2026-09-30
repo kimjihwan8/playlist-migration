@@ -1,0 +1,185 @@
+import { useState } from 'react'
+import { Navigate, useNavigate } from 'react-router'
+import { ArrowRight, Check, Heart, ListMusic, Music2, RotateCcw } from 'lucide-react'
+import { BackLink } from '../../components/BackLink'
+import { TopBar } from '../../components/TopBar'
+import { Footer } from '../../components/Footer'
+import { Stepper } from '../../components/Stepper'
+import { PlatformCard } from '../../components/PlatformCard'
+import { PLATFORMS, platformById, type PlatformId } from '../../lib/platforms'
+import { connectPlatform } from '../../lib/api-client'
+import { destinationOf } from '../../lib/destination'
+import { pickedCount, pickedPlaylists, totalPicked } from '../../lib/selection'
+import { useTransfer } from '../../lib/transfer-store'
+import './target.css'
+
+export function SelectTargetScreen() {
+  const navigate = useNavigate()
+  const {
+    sourcePlatform,
+    playlists,
+    picks,
+    destinations,
+    targetPlatform,
+    targetAccount,
+    set,
+  } = useTransfer()
+  const [connecting, setConnecting] = useState<PlatformId | null>(null)
+
+  const chosen = pickedPlaylists(playlists, picks)
+  const totalTracks = totalPicked(playlists, picks)
+
+  const pick = async (id: PlatformId) => {
+    setConnecting(id)
+    try {
+      const account = await connectPlatform(id, 'target')
+      set({ targetPlatform: id, targetAccount: account })
+    } finally {
+      setConnecting(null)
+    }
+  }
+
+  if (!sourcePlatform || chosen.length === 0) return <Navigate to="/" replace />
+
+  const connected = Boolean(targetPlatform && targetAccount)
+
+  return (
+    <div className="screen-shell">
+      <TopBar />
+
+      <main className="page-main">
+        <BackLink to="/source">선택 화면으로 돌아가기</BackLink>
+
+        <div className="intro">
+          <div className="eyebrow">STEP 3</div>
+          <h1>
+            <em>어디로</em> 옮길까요?
+          </h1>
+          <p>옮겨받을 서비스에 로그인하면 바로 이전을 시작해요.</p>
+        </div>
+
+        <div className="card target-card">
+          <Stepper current="타겟" />
+
+          <div className="transfer-summary">
+            <ListMusic size={15} />
+            <span>
+              {platformById(sourcePlatform).name}에서 <strong>{totalTracks}곡</strong> · 목록{' '}
+              <strong>{chosen.length}개</strong>
+            </span>
+          </div>
+
+          {connected && targetAccount && targetPlatform ? (
+            <>
+              <div className="connected-target">
+                <span className="slot-avatar" style={{ background: targetAccount.avatar }}>
+                  <Check size={19} />
+                </span>
+                <div>
+                  <strong>
+                    {platformById(targetPlatform).name} · {targetAccount.displayName}
+                  </strong>
+                  <span>연결됨</span>
+                </div>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => set({ targetPlatform: null, targetAccount: null })}
+                >
+                  <RotateCcw size={13} /> 바꾸기
+                </button>
+              </div>
+
+              <div className="name-list">
+                <label>옮긴 곡을 어디에 넣을까요?</label>
+                {chosen.map((p) => {
+                  const dest = destinationOf(p, destinations)
+                  return (
+                    <div className="name-row" key={p.id}>
+                      <span className="name-cover" style={{ background: p.cover }}>
+                        {p.kind === 'liked' ? <Heart size={14} fill="currentColor" /> : <Music2 size={14} />}
+                      </span>
+                      <span className="name-origin">
+                        <strong>{p.name}</strong>
+                        <span>{pickedCount(p, picks[p.id])}곡</span>
+                      </span>
+                      <ArrowRight size={14} />
+
+                      <select
+                        className="dest-select"
+                        value={dest.type}
+                        aria-label={`${p.name}을 어디에 넣을지`}
+                        onChange={(e) =>
+                          set({
+                            destinations: {
+                              ...destinations,
+                              [p.id]:
+                                e.target.value === 'liked'
+                                  ? { type: 'liked' }
+                                  : { type: 'new', name: p.name },
+                            },
+                          })
+                        }
+                      >
+                        <option value="new">새 재생목록</option>
+                        <option value="liked">좋아하는 노래</option>
+                      </select>
+
+                      {dest.type === 'new' ? (
+                        <input
+                          value={dest.name}
+                          onChange={(e) =>
+                            set({
+                              destinations: {
+                                ...destinations,
+                                [p.id]: { type: 'new', name: e.target.value },
+                              },
+                            })
+                          }
+                          placeholder={p.name}
+                          aria-label={`${p.name}의 새 이름`}
+                        />
+                      ) : (
+                        <span className="liked-note">이미 담긴 곡은 그대로 둬요</span>
+                      )}
+                    </div>
+                  )
+                })}
+                <p className="name-hint">
+                  새 재생목록은 비공개로 만들고, 설명에 원본 정보를 남겨요. 기존 재생목록에 합치는
+                  건 아직 지원하지 않아요.
+                </p>
+              </div>
+
+              <button
+                className="btn btn-primary btn-block"
+                style={{ marginTop: 18 }}
+                onClick={() => navigate('/transfer')}
+              >
+                {totalTracks}곡 이전 시작 <ArrowRight size={16} />
+              </button>
+            </>
+          ) : (
+            <div className="platform-list">
+              {PLATFORMS.filter((p) => p.roles.includes('target')).map((platform) => (
+                <PlatformCard
+                  key={platform.id}
+                  platform={platform}
+                  state={connecting === platform.id ? 'connecting' : 'idle'}
+                  onClick={() => pick(platform.id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {!connected && (
+          <p className="scope-note">
+            같은 서비스를 골라도 돼요 — 다른 계정으로 로그인하면 계정 간 이전이 됩니다.
+          </p>
+        )}
+      </main>
+
+      <Footer />
+    </div>
+  )
+}
