@@ -1,0 +1,95 @@
+import { Hono } from 'hono'
+import { matchAll, sourceNote, type Destination, type MatchResult, type SourceTrack, type TargetTrack } from '@pm/core'
+import { adapterFor } from '../lib/adapters'
+import { loadEnv, type Env } from '../lib/env'
+
+/** 화면이 그대로 렌더링하는 모양. 내부 용어(ISRC)는 라벨링을 프론트에 맡긴다. */
+type TrackResult =
+  | {
+      status: 'MATCHED'
+      method: string
+      source: { title: string; artist: string }
+      target: { title: string; artist: string; album: string | null; cover: string | null; url: string }
+    }
+  | { status: 'FAILED'; reason: string; source: { title: string; artist: string } }
+
+type TransferItem = {
+  playlistId: string
+  trackIds: 'all' | string[]
+  destination: { type: 'new'; name: string } | { type: 'liked' }
+}
+
+export function transferRoutes(env: Env = loadEnv()) {
+  const app = new Hono()
+
+  /**
+   * P1 은 동기 한 방이다. **작은 재생목록에서만 끝까지 간다** —
+   * API Gateway 의 29초 하드리밋이 있고, 곡마다 검색 1회 + 쓰기 배치가 붙기 때문이다.
+   * 이 한계에 실제로 부딪히는 것이 P2(비동기 워커 + 폴링)의 명분이므로 지금 피해가지 않는다.
+   */
+  app.post('/', async (c) => {
+    const body = await c.req.json<{ items: TransferItem[] }>()
+    const items = body.items ?? []
+    if (items.length === 0) return c.json({ error: '옮길 재생목록이 없다' }, 400)
+
+    const source = await adapterFor(c, env, 'source')
+    const target = await adapterFor(c, env, 'target')
+
+    // 설명에 넣을 원본 이름·소유자를 알아야 해서 목록을 한 번 읽는다.
+    const playlists = await source.listPlaylists()
+
+    const destinations = []
+    const tracks: TrackResult[] = []
+
+    for (const item of items) {
+      const playlist = playlists.find((p) => p.id === item.playlistId)
+      if (!playlist) return c.json({ error: `재생목록을 찾을 수 없다: ${item.playlistId}` }, 404)
+
+      const all = await source.listTracks(item.playlistId)
+      const picked: SourceTrack[] =
+        item.trackIds === 'all' ? all : all.filter((t) => item.trackIds.includes(t.id))
+
+      const results = await matchAll(picked, target)
+      tracks.push(...results.map(toTrackResult))
+
+      // 찾은 곡만, 원래 순서대로 쓴다.
+      const found = results.flatMap((r) => (r.status === 'MATCHED' ? [r.target] : []))
+      if (found.length > 0) {
+        destinations.push(await target.write(destinationFor(item, playlist.name, playlist.owner, playlist.kind), found))
+      }
+    }
+
+    return c.json({ destinations, tracks })
+  })
+
+  return app
+}
+
+function destinationFor(
+  item: TransferItem,
+  name: string,
+  owner: string,
+  kind: 'playlist' | 'liked',
+): Destination {
+  if (item.destination.type === 'liked') return { type: 'liked' }
+  return {
+    type: 'new',
+    name: item.destination.name,
+    // 출처를 자동으로 남긴다. 편집 UI 는 없다 — 설명 칸은 홍보 자리가 아니다.
+    description: sourceNote({ name, owner, kind }, 'Spotify'),
+  }
+}
+
+function toTrackResult(r: MatchResult): TrackResult {
+  const source = { title: r.source.title, artist: r.source.artist }
+  if (r.status === 'FAILED') return { status: 'FAILED', reason: r.reason, source }
+  return { status: 'MATCHED', method: r.method, source, target: view(r.target) }
+}
+
+const view = (t: TargetTrack) => ({
+  title: t.title,
+  artist: t.artist,
+  album: t.album,
+  cover: t.cover,
+  url: t.url,
+})

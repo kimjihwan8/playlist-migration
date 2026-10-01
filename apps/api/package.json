@@ -1,0 +1,22 @@
+{
+  "name": "api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pm/adapter-spotify": "workspace:*",
+    "@pm/core": "workspace:*",
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^1.13.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

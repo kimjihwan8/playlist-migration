@@ -4,11 +4,14 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
-    // 백엔드(apps/api)가 생기면 여기로 프록시. 그래야 로컬에서도 same-origin이라
-    // 쿠키 세션이 배포 환경과 동일하게 동작한다.
+    port: 5174,
+    /**
+     * 배포에서는 CloudFront 가 `/api/*` 를 API Gateway 로 넘긴다.
+     * 로컬에서도 같은 출처로 보이게 맞춰야 쿠키가 first-party 로 붙고
+     * OAuth Redirect URI 도 한 벌만 등록하면 된다.
+     */
     proxy: {
-      '/api': { target: 'http://localhost:8787', changeOrigin: true },
+      '/api': { target: 'http://127.0.0.1:8787', changeOrigin: false },
     },
   },
 })
