@@ -57,6 +57,23 @@
 `playlist-modify-public` 은 **일부러 뺐다.** 만드는 재생목록을 전부 비공개로 고정했기 때문에
 필요가 없고, 동의 화면에서 요구하는 권한이 한 줄 줄어든다.
 
+### ⚠️ 2026-02 Web API 마이그레이션 (이미 반영함)
+
+구 엔드포인트는 **2026-03-09 부터 모든 호출자에게 403** 이다. 개발 모드 제한이 아니라 전면 폐기다.
+
+| 폐기된 것 | 바뀐 것 | 비고 |
+|---|---|---|
+| `GET /playlists/{id}/tracks` | `GET /playlists/{id}/items` | **소유·협업 재생목록만** 읽힌다 |
+| `POST /playlists/{id}/tracks` | `POST /playlists/{id}/items` | 본문 `{uris:[]}`, 100개 |
+| `POST /users/{id}/playlists` | `POST /me/playlists` | 경로에서 사용자 ID 가 사라짐 |
+| `PUT /me/tracks` (ids) | `PUT /me/library?uris=…` | **쿼리 파라미터**, URI, **40개** |
+| `GET /me/tracks` | 그대로 | 읽기는 폐기되지 않았다 |
+| `GET /search` | 그대로 | `limit` 최대 50 → **10** |
+
+> **남아 있는 제약:** `/items` 는 사용자가 **소유하거나 협업 중인** 재생목록만 읽힌다.
+> 팔로우만 한 남의 재생목록은 403 이다. 계정 이사라는 용도에는 대체로 맞지만,
+> 목록에는 보이는데 못 읽는 재생목록이 생기므로 UI 에서 구분해 줘야 한다. (TODO)
+
 ## 2. Apple Music API (아직 구현 안 함)
 
 Spotify 와 구조가 다르다. **토큰이 두 종류**다.

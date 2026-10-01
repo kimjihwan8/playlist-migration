@@ -22,14 +22,26 @@ import {
 
 type Paged<T> = { items: T[]; next: string | null; total?: number }
 
-/** 재생목록 추가는 한 번에 100곡, 좋아하는 노래는 50곡 — 그래서 chunk 가 크기를 받는다. */
-const PLAYLIST_ADD_LIMIT = 100
-const LIBRARY_ADD_LIMIT = 50
+/** 어댑터가 실제로 쓰는 것만. 테스트에서 가짜를 끼우기 쉽게 좁게 받는다. */
+export type HttpClient = Pick<SpotifyHttp, 'get' | 'post' | 'put'>
 
+/**
+ * 배치 한도. **두 목적지가 서로 다르다** — 그래서 chunk 가 크기를 인자로 받는다.
+ *   재생목록 추가: 100개 (POST /playlists/{id}/items)
+ *   라이브러리 저장: 40개 (PUT /me/library)
+ */
+const PLAYLIST_ADD_LIMIT = 100
+const LIBRARY_ADD_LIMIT = 40
+
+/**
+ * ⚠️ 2026-02 Web API 마이그레이션 반영본.
+ * 구 엔드포인트(`/playlists/{id}/tracks`, `POST /users/{id}/playlists`, `PUT /me/tracks`)는
+ * 2026-03-09 부터 **모든 호출자에게 403** 이다. 개발 모드 제한이 아니라 전면 폐기다.
+ */
 export class SpotifyAdapter implements SourceAdapter, TargetAdapter {
   private me: SpotifyUser | null = null
 
-  constructor(private readonly http: SpotifyHttp) {}
+  constructor(private readonly http: HttpClient) {}
 
   async profile(): Promise<SpotifyUser> {
     this.me ??= await this.http.get<SpotifyUser>('/me')
@@ -50,11 +62,14 @@ export class SpotifyAdapter implements SourceAdapter, TargetAdapter {
 
   async listTracks(playlistId: string): Promise<SourceTrack[]> {
     if (playlistId === LIKED_ID) {
+      // GET /me/tracks 는 마이그레이션에서 살아남았다(쓰기만 /me/library 로 옮겨갔다).
       const saved = await this.pageAll<{ track: SpotifyTrack | null }>('/me/tracks?limit=50')
       return saved.flatMap((s, i) => (s.track ? [toSourceTrack(s.track, `liked:${i}`)] : []))
     }
+    // ⚠️ /items 는 **사용자가 소유하거나 협업 중인 재생목록만** 읽힌다.
+    // 남이 만든 재생목록을 팔로우만 한 경우에는 403 이 난다.
     const items = await this.pageAll<{ track: SpotifyTrack | null }>(
-      `/playlists/${playlistId}/tracks?limit=100`,
+      `/playlists/${playlistId}/items?limit=100`,
     )
     return items.flatMap((it, i) => {
       const t = it.track
@@ -68,6 +83,7 @@ export class SpotifyAdapter implements SourceAdapter, TargetAdapter {
 
   async searchByIsrc(isrc: string): Promise<TargetTrack[]> {
     const q = encodeURIComponent(`isrc:${isrc}`)
+    // limit 최대값이 50 → 10 으로 줄었다(2026-02). 5 는 그 안이라 그대로 둔다.
     const res = await this.http.get<{ tracks?: Paged<SpotifyTrack> }>(
       `/search?q=${q}&type=track&limit=5`,
     )
@@ -87,9 +103,10 @@ export class SpotifyAdapter implements SourceAdapter, TargetAdapter {
     destination: Extract<Destination, { type: 'new' }>,
     tracks: readonly TargetTrack[],
   ): Promise<WrittenDestination> {
-    const me = await this.profile()
+    // POST /users/{id}/playlists 는 폐기됐다 → /me/playlists.
+    // 어차피 "쓰는 토큰이 곧 소유자" 였으므로 경로에서 사용자 ID 가 사라진 것이 더 정직하다.
     const created = await this.http.post<SpotifyPlaylist & { external_urls?: { spotify?: string } }>(
-      `/users/${me.id}/playlists`,
+      '/me/playlists',
       {
         name: destination.name,
         description: destination.description,
@@ -100,7 +117,7 @@ export class SpotifyAdapter implements SourceAdapter, TargetAdapter {
 
     // 순서대로 넣는다. 배치를 병렬로 보내면 도착 순서가 뒤집혀 재생목록 순서가 깨진다.
     for (const batch of chunk(tracks, PLAYLIST_ADD_LIMIT)) {
-      await this.http.post(`/playlists/${created.id}/tracks`, { uris: batch.map((t) => t.uri) })
+      await this.http.post(`/playlists/${created.id}/items`, { uris: batch.map((t) => t.uri) })
     }
 
     return {
@@ -112,10 +129,12 @@ export class SpotifyAdapter implements SourceAdapter, TargetAdapter {
   }
 
   private async writeToLibrary(tracks: readonly TargetTrack[]): Promise<WrittenDestination> {
-    // PUT /me/tracks 는 집합 연산이라 같은 곡을 두 번 넣어도 중복이 생기지 않는다
+    // PUT /me/library 는 집합 연산이라 같은 곡을 두 번 넣어도 중복이 생기지 않는다
     // — 멱등성 처리가 따로 필요 없는 유일한 목적지.
+    // 본문이 아니라 **쿼리 파라미터**로 URI 를 콤마로 이어 보낸다(한 번에 40개).
     for (const batch of chunk(tracks, LIBRARY_ADD_LIMIT)) {
-      await this.http.put('/me/tracks', { ids: batch.map((t) => t.id) })
+      const uris = encodeURIComponent(batch.map((t) => t.uri).join(','))
+      await this.http.put(`/me/library?uris=${uris}`)
     }
     return {
       id: null,
