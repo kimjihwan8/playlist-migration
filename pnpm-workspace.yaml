@@ -1,6 +1,7 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+  - 'packages/adapters/*'
 
 # esbuild는 설치 시 플랫폼 바이너리를 내려받는 postinstall이 필요하다.
 allowBuilds:
