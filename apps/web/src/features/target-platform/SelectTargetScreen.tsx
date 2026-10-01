@@ -8,6 +8,7 @@ import { Stepper } from '../../components/Stepper'
 import { PlatformCard } from '../../components/PlatformCard'
 import { PLATFORMS, platformById, type PlatformId } from '../../lib/platforms'
 import { connectPlatform } from '../../lib/api-client'
+import { coverStyle } from '../../lib/cover'
 import { destinationOf } from '../../lib/destination'
 import { pickedCount, pickedPlaylists, totalPicked } from '../../lib/selection'
 import { useTransfer } from '../../lib/transfer-store'
@@ -16,6 +17,7 @@ import './target.css'
 export function SelectTargetScreen() {
   const navigate = useNavigate()
   const {
+    hydrated,
     sourcePlatform,
     playlists,
     picks,
@@ -39,6 +41,7 @@ export function SelectTargetScreen() {
     }
   }
 
+  if (!hydrated) return null
   if (!sourcePlatform || chosen.length === 0) return <Navigate to="/" replace />
 
   const connected = Boolean(targetPlatform && targetAccount)
@@ -95,7 +98,7 @@ export function SelectTargetScreen() {
                   const dest = destinationOf(p, destinations)
                   return (
                     <div className="name-row" key={p.id}>
-                      <span className="name-cover" style={{ background: p.cover }}>
+                      <span className="name-cover" style={coverStyle(p.cover)}>
                         {p.kind === 'liked' ? <Heart size={14} fill="currentColor" /> : <Music2 size={14} />}
                       </span>
                       <span className="name-origin">

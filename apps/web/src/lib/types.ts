@@ -13,7 +13,7 @@ export type Playlist = {
   name: string
   owner: string
   trackCount: number
-  cover: string
+  cover: string | null
   /** 'liked' = "좋아하는 노래". 플레이리스트가 아니라 별도 컬렉션이지만
    *  곡 단위라 어댑터에서 가상 플레이리스트로 취급한다 — 코어·UI 변경 0. */
   kind: 'playlist' | 'liked'
@@ -23,7 +23,8 @@ export type SourceTrack = {
   id: string
   title: string
   artist: string
-  album: string
+  album: string | null
+  durationMs: number | null
   /** null이면 ISRC 매칭을 건너뛰고 바로 실패한다(P1 기준) */
   isrc: string | null
 }

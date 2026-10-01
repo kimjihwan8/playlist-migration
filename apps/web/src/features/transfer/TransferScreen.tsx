@@ -116,7 +116,7 @@ function MethodBreakdown({ tracks }: { tracks: TrackResult[] }) {
 
 export function TransferScreen() {
   const navigate = useNavigate()
-  const { playlists, picks, destinations, targetPlatform, targetAccount, result, set, reset } =
+  const { hydrated, playlists, picks, destinations, targetPlatform, targetAccount, result, set, reset } =
     useTransfer()
 
   const chosen = pickedPlaylists(playlists, picks)
@@ -127,9 +127,12 @@ export function TransferScreen() {
   const [filter, setFilter] = useState<Filter>('all')
   // 마지막에 도착한 행만 애니메이션을 준다
   const seen = useRef(0)
+  // 이전은 한 번만 시작한다. 연결 상태를 확인하느라 effect 가 다시 돌아도 두 번 보내면 안 된다.
+  const started = useRef(false)
 
   useEffect(() => {
-    if (!ready || !targetPlatform || result) return
+    if (!ready || !targetPlatform || result || started.current) return
+    started.current = true
     let alive = true
 
     const items: TransferItem[] = chosen.map((p) => {
@@ -148,10 +151,12 @@ export function TransferScreen() {
     return () => {
       alive = false
     }
-    // 진입 시 딱 한 번만 실행한다. store가 갱신돼도 재실행되면 안 된다.
+    // ready 는 서버에 연결 상태를 묻고 나서야 true 가 된다 — 처음 한 프레임은 false 다.
+    // 그래서 []가 아니라 [ready]이고, 중복 실행은 started 가 막는다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [ready])
 
+  if (!hydrated) return null
   if (!ready) return <Navigate to="/" replace />
 
   const running = !result

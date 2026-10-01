@@ -17,6 +17,7 @@ import { Footer } from '../../components/Footer'
 import { Stepper } from '../../components/Stepper'
 import { fetchPlaylistTracks, fetchPlaylists } from '../../lib/api-client'
 import { platformById } from '../../lib/platforms'
+import { coverStyle } from '../../lib/cover'
 import { isTrackPicked, pickedCount, totalPicked, type Pick } from '../../lib/selection'
 import { useTransfer } from '../../lib/transfer-store'
 import type { Playlist } from '../../lib/types'
@@ -36,7 +37,7 @@ function Checkbox({ state }: { state: 'on' | 'off' | 'partial' }) {
 
 export function BrowseSourceScreen() {
   const navigate = useNavigate()
-  const { sourcePlatform, sourceAccount, playlists, tracksByPlaylist, picks, set, reset } =
+  const { hydrated, sourcePlatform, sourceAccount, playlists, tracksByPlaylist, picks, set, reset } =
     useTransfer()
 
   const [loading, setLoading] = useState(playlists.length === 0)
@@ -157,7 +158,7 @@ export function BrowseSourceScreen() {
             <Checkbox state={state} />
           </button>
 
-          <span className="tree-cover" style={{ background: p.cover }}>
+          <span className="tree-cover" style={coverStyle(p.cover)}>
             {p.kind === 'liked' ? <Heart size={19} fill="currentColor" /> : <Music2 size={19} />}
           </span>
 
@@ -202,6 +203,7 @@ export function BrowseSourceScreen() {
     )
   }
 
+  if (!hydrated) return null
   if (!sourcePlatform || !sourceAccount) return <Navigate to="/" replace />
 
   return (

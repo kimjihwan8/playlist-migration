@@ -108,6 +108,7 @@
 .tree-pick { border: 0; padding: 0; background: transparent; display: grid; place-items: center; border-radius: 6px; }
 .tree-cover {
   flex: none;
+  background: var(--control-bg);
   display: grid;
   place-items: center;
   width: 44px; height: 44px;
