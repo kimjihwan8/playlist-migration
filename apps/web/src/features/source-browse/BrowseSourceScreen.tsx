@@ -204,7 +204,9 @@ export function BrowseSourceScreen() {
   }
 
   if (!hydrated) return null
-  if (!sourcePlatform || !sourceAccount) return <Navigate to="/" replace />
+  // 세션이 없으면 조용히 되돌리지 않는다. 이유 없이 첫 화면으로 튕기면
+  // 사용자도 개발자도 "로그인이 된 건지 안 된 건지" 를 알 수 없다.
+  if (!sourcePlatform || !sourceAccount) return <Navigate to="/?error=not_connected" replace />
 
   return (
     <div className="screen-shell">

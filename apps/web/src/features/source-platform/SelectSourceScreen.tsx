@@ -17,6 +17,8 @@ import { useTransfer } from '../../lib/transfer-store'
 const CONNECT_ERRORS: Record<string, string | undefined> = {
   not_allowlisted:
     '이 Spotify 계정은 아직 테스트 사용자로 등록되지 않았어요. 개발자가 허용목록에 추가해야 연결할 수 있어요.',
+  not_connected: '로그인이 끝나지 않았어요. Spotify를 다시 눌러 로그인해 주세요.',
+  nothing_picked: '옮길 곡을 먼저 선택해 주세요.',
   access_denied: '권한 요청을 취소했어요. 다시 시도하려면 아래에서 Spotify를 눌러주세요.',
   session_expired: '연결 요청이 만료됐어요. 다시 시도해 주세요.',
   state_mismatch: '보안 검증에 실패했어요. 처음부터 다시 시도해 주세요.',

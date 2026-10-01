@@ -57,7 +57,9 @@ const EMPTY: TransferState = {
  * localStorage 가 아니라 sessionStorage 인 이유는 탭을 닫으면 남을 이유가 없어서다
  * (P2 에서 job_id 가 생기면 이 자리는 서버 상태로 넘어간다 — ERD 의 "P1/P2 차이" 표).
  */
-const KEY = 'pm.transfer'
+// 저장 모양이 바뀌면 키를 올린다. 옛 데이터가 남아 'playlists 가 이미 있다'고
+// 착각하면 서버를 부르지 않아, 목 데이터를 띄우거나 빈 화면을 보여준다.
+const KEY = 'pm.transfer.v2'
 
 /** 저장하지 않는 것: 계정은 서버가 진실이고, 곡 목록은 다시 받으면 되는 캐시다. */
 type Persisted = Pick<TransferState, 'sourcePlatform' | 'playlists' | 'picks' | 'destinations' | 'targetPlatform'>

@@ -42,7 +42,7 @@ export function SelectTargetScreen() {
   }
 
   if (!hydrated) return null
-  if (!sourcePlatform || chosen.length === 0) return <Navigate to="/" replace />
+  if (!sourcePlatform || chosen.length === 0) return <Navigate to="/?error=nothing_picked" replace />
 
   const connected = Boolean(targetPlatform && targetAccount)
 

@@ -18,7 +18,8 @@ export type SpotifyPlaylist = {
   id: string
   name: string
   owner?: { display_name?: string | null; id?: string } | null
-  tracks?: { total?: number } | null
+  /** 2026-02 에 `tracks` → `items` 로 이름이 바뀌었다. 남의 재생목록에는 아예 오지 않는다. */
+  items?: { total?: number } | null
   images?: Array<{ url: string }> | null
 }
 
@@ -68,7 +69,7 @@ export function toSourcePlaylist(p: SpotifyPlaylist): SourcePlaylist {
     id: p.id,
     name: p.name,
     owner: p.owner?.display_name ?? p.owner?.id ?? '알 수 없음',
-    trackCount: p.tracks?.total ?? 0,
+    trackCount: p.items?.total ?? 0,
     cover: p.images?.[0]?.url ?? null,
     kind: 'playlist',
   }

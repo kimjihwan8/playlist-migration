@@ -157,7 +157,7 @@ export function TransferScreen() {
   }, [ready])
 
   if (!hydrated) return null
-  if (!ready) return <Navigate to="/" replace />
+  if (!ready) return <Navigate to="/?error=nothing_picked" replace />
 
   const running = !result
   const tracks = result?.tracks ?? progress.tracks

@@ -137,3 +137,23 @@ describe('2026-02 마이그레이션 엔드포인트', () => {
     expect(found[0]?.uri).toBe('spotify:track:t1')
   })
 })
+
+describe('2026-02 마이그레이션 응답 필드', () => {
+  it('재생목록 항목의 곡은 track 이 아니라 item 에 온다', async () => {
+    const http = fakeHttp({ '/playlists/pl1/items': { items: [{ item: spotifyTrack }], next: null } })
+    const tracks = await new SpotifyAdapter(http).listTracks('pl1')
+
+    expect(tracks.map((t) => t.title)).toEqual(['밤편지'])
+  })
+
+  it('재생목록 곡 수는 tracks.total 이 아니라 items.total', async () => {
+    const http = fakeHttp({
+      '/me/playlists': { items: [{ id: 'pl1', name: '출근길', items: { total: 12 } }], next: null },
+      '/me/tracks': { items: [], next: null, total: 0 },
+      '/me': { id: 'u1' },
+    })
+    const [, playlist] = await new SpotifyAdapter(http).listPlaylists()
+
+    expect(playlist?.trackCount).toBe(12)
+  })
+})

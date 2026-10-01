@@ -68,11 +68,12 @@ export class SpotifyAdapter implements SourceAdapter, TargetAdapter {
     }
     // ⚠️ /items 는 **사용자가 소유하거나 협업 중인 재생목록만** 읽힌다.
     // 남이 만든 재생목록을 팔로우만 한 경우에는 403 이 난다.
-    const items = await this.pageAll<{ track: SpotifyTrack | null }>(
+    // 응답 필드도 `track` → `item` 으로 바뀌었다(2026-02). `/me/tracks` 는 그대로 `track` 이다.
+    const items = await this.pageAll<{ item: SpotifyTrack | null }>(
       `/playlists/${playlistId}/items?limit=100`,
     )
     return items.flatMap((it, i) => {
-      const t = it.track
+      const t = it.item
       // 팟캐스트 에피소드와 삭제된 항목은 곡이 아니라 아예 제외한다.
       if (!t || (t.type && t.type !== 'track')) return []
       return [toSourceTrack(t, `${playlistId}:${i}`)]

@@ -28,6 +28,9 @@ export function createApp(env: Env = loadEnv()) {
       return c.json({ error: 'not_connected', role: err.role }, 401)
     }
     if (err instanceof SpotifyApiError) {
+      // 반드시 남긴다. 상태코드만 브라우저에 보이고 본문이 어디에도 안 남으면
+      // "403 인데 왜 403 인지" 를 추적할 길이 사라진다.
+      console.error(`[spotify] ${c.req.method} ${c.req.path} → ${err.status} ${err.body}`)
       // 종류를 함께 내려보낸다 — 화면이 "다시 시도" 를 권할지 말지 여기서 갈린다.
       return c.json({ error: 'spotify_error', kind: err.kind, status: err.status }, 502)
     }
