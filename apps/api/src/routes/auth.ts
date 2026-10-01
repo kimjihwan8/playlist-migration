@@ -1,5 +1,13 @@
 import { Hono } from 'hono'
-import { authorizeUrl, createPkce, createState, exchangeCode, SpotifyAdapter, SpotifyHttp } from '@pm/adapter-spotify'
+import {
+  authorizeUrl,
+  createPkce,
+  createState,
+  exchangeCode,
+  SpotifyAdapter,
+  SpotifyApiError,
+  SpotifyHttp,
+} from '@pm/adapter-spotify'
 import { loadEnv, redirectUri, type Env } from '../lib/env'
 import { clearSession, getSession, isRole, setPkce, setSession, takePkce, type Role } from '../lib/session'
 
@@ -53,9 +61,25 @@ export function authRoutes(env: Env = loadEnv()) {
       verifier: pkce.verifier,
     })
 
-    const profile = await new SpotifyAdapter(
-      new SpotifyHttp({ clientId: env.spotifyClientId, tokens }),
-    ).profile()
+    /**
+     * 동의까지 끝났는데 첫 API 호출이 403 이면 원인은 거의 하나다:
+     * **그 계정이 앱의 허용목록(Dashboard → User Management)에 없다.**
+     * 개발 모드 앱은 등록된 5명 외에는 토큰을 받고도 아무것도 못 읽는다.
+     *
+     * 이걸 일반 에러로 흘리면 화면에 `spotify_error 403` 만 떠서
+     * "내가 뭘 잘못했지"를 알 수 없다. 사유를 붙여 첫 화면으로 돌려보낸다.
+     */
+    let profile
+    try {
+      profile = await new SpotifyAdapter(
+        new SpotifyHttp({ clientId: env.spotifyClientId, tokens }),
+      ).profile()
+    } catch (err) {
+      if (err instanceof SpotifyApiError && err.status === 403) {
+        return c.redirect('/?error=not_allowlisted')
+      }
+      throw err
+    }
 
     await setSession(c, env, pkce.role, {
       platform: 'spotify',

@@ -245,3 +245,23 @@ select:focus-visible,
   .step-line { width: 12px; }
   .stepper-item span:last-child { font-size: var(--text-xs); }
 }
+
+/* 연결 실패 안내. 빨강을 쓰지 않는다 — 사용자가 틀린 게 아니라 권한이 없는 상태라서. */
+.connect-error {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border: 1px solid var(--control-border);
+  border-radius: 10px;
+  background: var(--control-bg);
+  color: var(--text);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.connect-error svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--accent);
+}
