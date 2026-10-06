@@ -24,7 +24,24 @@ if (existsSync(envFile)) {
 const env = loadEnv()
 const port = Number(process.env.PORT ?? 8787)
 
-serve({ fetch: createApp(env).fetch, port })
+const server = serve({ fetch: createApp(env).fetch, port })
+
+/**
+ * 포트가 이미 물려 있으면 스택트레이스 대신 할 일을 알려준다.
+ *
+ * 이게 중요한 이유: 먼저 뜬 서버가 그대로 요청을 받아버리기 때문에 **겉으로는 멀쩡해 보인다.**
+ * 그 서버가 옛 설정(.env 반영 전)이나 옛 코드로 떠 있으면, 고친 내용이 반영되지 않는데도
+ * 원인을 찾을 단서가 없다. 실제로 이 프로젝트에서 두 번 겪었다.
+ */
+server.on?.('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n포트 ${port} 를 이미 다른 프로세스가 쓰고 있다.`)
+    console.error(`지금 요청을 받고 있는 것은 이 서버가 아니라 그쪽이다 — 먼저 정리할 것:`)
+    console.error(`  lsof -ti TCP:${port} -sTCP:LISTEN | xargs kill -9\n`)
+    process.exit(1)
+  }
+  throw err
+})
 
 // 어떤 설정으로 떴는지 찍는다. "왜 client_id 가 이상하지?" 를 1초 만에 알 수 있게.
 console.log(`api  → http://127.0.0.1:${port}/api/health`)
