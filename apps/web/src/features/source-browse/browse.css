@@ -188,3 +188,21 @@
   .tree-section { flex-wrap: wrap; }
   .tree-section .search-field { width: 100%; margin-left: 0; }
 }
+
+/* 가져올 수 없는 재생목록. 숨기지 않고 why 를 보여준다 —
+   목록에서 사라지면 사용자는 "내 플리가 왜 없지" 로 읽는다. */
+.tree-row.locked {
+  cursor: default;
+  opacity: 0.55;
+}
+.tree-row.locked:hover {
+  background: transparent;
+}
+.tree-row.locked .tree-pick {
+  visibility: hidden;
+}
+.tree-row.locked .tree-meta span {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}

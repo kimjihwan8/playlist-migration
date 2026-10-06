@@ -64,7 +64,7 @@ export function toTargetTrack(t: SpotifyTrack): TargetTrack | null {
   }
 }
 
-export function toSourcePlaylist(p: SpotifyPlaylist): SourcePlaylist {
+export function toSourcePlaylist(p: SpotifyPlaylist, meId: string): SourcePlaylist {
   return {
     id: p.id,
     name: p.name,
@@ -72,6 +72,8 @@ export function toSourcePlaylist(p: SpotifyPlaylist): SourcePlaylist {
     trackCount: p.items?.total ?? 0,
     cover: p.images?.[0]?.url ?? null,
     kind: 'playlist',
+    // 소유자 ID 로만 판정한다. 표시 이름은 중복될 수 있어 신뢰할 수 없다.
+    owned: Boolean(p.owner?.id) && p.owner?.id === meId,
   }
 }
 
@@ -86,5 +88,6 @@ export function likedPlaylist(me: SpotifyUser, total: number): SourcePlaylist {
     trackCount: total,
     cover: null,
     kind: 'liked',
+    owned: true, // 본인 라이브러리다
   }
 }

@@ -157,3 +157,46 @@ describe('2026-02 마이그레이션 응답 필드', () => {
     expect(playlist?.trackCount).toBe(12)
   })
 })
+
+describe('읽을 수 있는 재생목록 가려내기', () => {
+  const listing = (owners: Array<string | undefined>) => ({
+    '/me': { id: 'me1', display_name: '지환' },
+    '/me/tracks': { items: [], next: null, total: 0 },
+    '/me/playlists': {
+      items: owners.map((id, i) => ({
+        id: `p${i}`,
+        name: `pl${i}`,
+        owner: id === undefined ? null : { id, display_name: id },
+        items: { total: 3 },
+      })),
+      next: null,
+    },
+  })
+
+  it('내가 만든 것만 owned=true — 저장(팔로우)만 한 남의 재생목록은 false', async () => {
+    // /me/playlists 는 "내가 만든 것 + 내가 저장한 것"을 모두 준다.
+    // 그런데 곡은 내가 만든 것만 읽힌다(저장만 한 것은 403).
+    const http = fakeHttp(listing(['me1', 'spotify', 'friend']))
+
+    const [, mine, curated, friend] = await new SpotifyAdapter(http).listPlaylists()
+
+    expect(mine?.owned).toBe(true)
+    expect(curated?.owned).toBe(false)
+    expect(friend?.owned).toBe(false)
+  })
+
+  it('"좋아하는 노래"는 언제나 내 것이다', async () => {
+    const http = fakeHttp(listing([]))
+    const [liked] = await new SpotifyAdapter(http).listPlaylists()
+
+    expect(liked?.kind).toBe('liked')
+    expect(liked?.owned).toBe(true)
+  })
+
+  it('소유자 정보가 없으면 읽을 수 있다고 가정하지 않는다', async () => {
+    const http = fakeHttp(listing([undefined]))
+    const [, unknown] = await new SpotifyAdapter(http).listPlaylists()
+
+    expect(unknown?.owned).toBe(false)
+  })
+})

@@ -45,6 +45,15 @@ export function transferRoutes(env: Env = loadEnv()) {
       const playlist = playlists.find((p) => p.id === item.playlistId)
       if (!playlist) return c.json({ error: `재생목록을 찾을 수 없다: ${item.playlistId}` }, 404)
 
+      // 화면이 이미 막지만, 저장해 둔 선택이 남아 다시 올라올 수 있다.
+      // 여기서 걸러야 "읽을 수 없는 재생목록" 하나가 작업 전체를 503 으로 끌어내리지 않는다.
+      if (!playlist.owned) {
+        return c.json(
+          { error: 'not_readable', playlistId: playlist.id, name: playlist.name },
+          400,
+        )
+      }
+
       const all = await source.listTracks(item.playlistId)
       const picked: SourceTrack[] =
         item.trackIds === 'all' ? all : all.filter((t) => item.trackIds.includes(t.id))

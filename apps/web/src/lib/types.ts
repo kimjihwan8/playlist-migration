@@ -17,6 +17,8 @@ export type Playlist = {
   /** 'liked' = "좋아하는 노래". 플레이리스트가 아니라 별도 컬렉션이지만
    *  곡 단위라 어댑터에서 가상 플레이리스트로 취급한다 — 코어·UI 변경 0. */
   kind: 'playlist' | 'liked'
+  /** 내가 만든 재생목록인가. 아니면 곡을 읽을 수 없어 선택도 막는다. */
+  owned: boolean
 }
 
 export type SourceTrack = {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 import {
   ArrowRight,
+  Lock,
   Check,
   ChevronDown,
   ChevronRight,
@@ -44,6 +45,8 @@ export function BrowseSourceScreen() {
   // 여러 개를 동시에 펼쳐둘 수 있다 — 곡을 비교하며 고르는 게 이 화면의 목적이라서.
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
   const [query, setQuery] = useState('')
+  // 곡을 불러오지 못한 재생목록. 빈 재생목록과 구분해야 한다.
+  const [failed, setFailed] = useState<ReadonlySet<string>>(new Set())
 
   useEffect(() => {
     if (!sourceAccount || playlists.length > 0) return
@@ -69,8 +72,11 @@ export function BrowseSourceScreen() {
   )
 
   const totalTracks = totalPicked(playlists, picks)
+  // 못 읽는 재생목록은 "전체"에서 빠진다. 안 그러면 전체 선택이 영원히 완료되지 않아
+  // 한 번 더 눌러도 해제가 안 된다.
+  const selectable = playlists.filter((p) => p.owned)
   const pickedListCount = playlists.filter((p) => isPicked(picks[p.id])).length
-  const allPicked = playlists.length > 0 && pickedListCount === playlists.length
+  const allPicked = selectable.length > 0 && pickedListCount === selectable.length
 
   const setPick = (playlistId: string, pick: Pick | null) => {
     const next = { ...picks }
@@ -79,26 +85,36 @@ export function BrowseSourceScreen() {
     set({ picks: next })
   }
 
-  const togglePlaylist = (p: Playlist) =>
+  const togglePlaylist = (p: Playlist) => {
+    if (!p.owned) return
     setPick(p.id, isPicked(picks[p.id]) ? null : { mode: 'all' })
+  }
 
   const toggleAll = () =>
     set({
       picks: allPicked
         ? {}
-        : Object.fromEntries(playlists.map((p) => [p.id, { mode: 'all' } as Pick])),
+        : Object.fromEntries(selectable.map((p) => [p.id, { mode: 'all' } as Pick])),
     })
 
   const toggleExpand = (playlistId: string) => {
+    // 읽을 수 없는 재생목록은 열지 않는다 — 열면 403 이고, 그걸 사용자에게 보여줄 이유가 없다.
+    if (playlists.find((p) => p.id === playlistId)?.owned === false) return
+
     const next = new Set(expanded)
     if (next.has(playlistId)) next.delete(playlistId)
     else next.add(playlistId)
     setExpanded(next)
 
     if (!tracksByPlaylist[playlistId]) {
-      fetchPlaylistTracks(playlistId).then((list) =>
-        set({ tracksByPlaylist: { ...tracksByPlaylist, [playlistId]: list } }),
-      )
+      fetchPlaylistTracks(playlistId)
+        .then((list) => set({ tracksByPlaylist: { ...tracksByPlaylist, [playlistId]: list } }))
+        .catch(() => {
+          // 실패해도 빈 목록으로 확정한다. 안 그러면 스피너가 영원히 돈다
+          // — "로딩 중"과 "불러오지 못함"은 사용자에게 완전히 다른 상태다.
+          setFailed((prev) => new Set(prev).add(playlistId))
+          set({ tracksByPlaylist: { ...tracksByPlaylist, [playlistId]: [] } })
+        })
     }
   }
 
@@ -133,9 +149,10 @@ export function BrowseSourceScreen() {
       <div key={p.id}>
         {/* 행 전체가 펼치기 버튼이다. 체크박스만 이벤트를 가로챈다. */}
         <div
-          className={`tree-row${count > 0 ? ' picked' : ''}`}
+          className={`tree-row${count > 0 ? ' picked' : ''}${p.owned ? '' : ' locked'}`}
           role="button"
-          tabIndex={0}
+          tabIndex={p.owned ? 0 : -1}
+          aria-disabled={!p.owned}
           aria-expanded={open}
           onClick={() => toggleExpand(p.id)}
           onKeyDown={(e) => {
@@ -165,13 +182,22 @@ export function BrowseSourceScreen() {
           <span className="tree-meta">
             <strong>{p.name}</strong>
             <span>
-              {count}/{p.trackCount}곡 선택됨
+              {p.owned ? (
+                `${count}/${p.trackCount}곡 선택됨`
+              ) : (
+                /* 숨기지 않고 이유를 적는다 — 목록에서 사라지면 "왜 내 플리가 없지"가 된다 */
+                <>
+                  <Lock size={11} /> {p.owner}님의 재생목록이라 가져올 수 없어요
+                </>
+              )}
             </span>
           </span>
 
-          <span className="tree-toggle" aria-hidden="true">
-            {open ? <ChevronDown size={19} /> : <ChevronRight size={19} />}
-          </span>
+          {p.owned && (
+            <span className="tree-toggle" aria-hidden="true">
+              {open ? <ChevronDown size={19} /> : <ChevronRight size={19} />}
+            </span>
+          )}
         </div>
 
         {open && (
@@ -180,6 +206,10 @@ export function BrowseSourceScreen() {
               <div className="track-loading">
                 <Loader2 size={15} className="spin" /> 곡을 불러오는 중
               </div>
+            ) : failed.has(p.id) ? (
+              <div className="track-loading">곡을 불러오지 못했어요</div>
+            ) : tracks.length === 0 ? (
+              <div className="track-loading">곡이 없는 재생목록이에요</div>
             ) : (
               tracks.map((track) => (
                 <button

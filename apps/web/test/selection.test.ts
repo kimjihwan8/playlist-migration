@@ -10,6 +10,7 @@ const playlist = (over: Partial<Playlist> = {}): Playlist => ({
   trackCount: 12,
   cover: null,
   kind: 'playlist',
+  owned: true,
   ...over,
 })
 
