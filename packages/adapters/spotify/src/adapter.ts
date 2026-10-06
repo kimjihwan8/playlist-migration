@@ -57,7 +57,7 @@ export class SpotifyAdapter implements SourceAdapter, TargetAdapter {
       this.pageAll<SpotifyPlaylist>('/me/playlists?limit=50'),
     ])
     // 좋아하는 노래를 맨 앞에 — 계정 이사에서 가장 자주 옮기는 대상이다.
-    return [likedPlaylist(me, liked.total ?? 0), ...playlists.map((p) => toSourcePlaylist(p, me.id))]
+    return [likedPlaylist(me, liked.total ?? 0), ...playlists.map((p) => toSourcePlaylist(p, me))]
   }
 
   async listTracks(playlistId: string): Promise<SourceTrack[]> {

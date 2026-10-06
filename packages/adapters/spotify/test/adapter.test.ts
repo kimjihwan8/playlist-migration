@@ -193,10 +193,28 @@ describe('읽을 수 있는 재생목록 가려내기', () => {
     expect(liked?.owned).toBe(true)
   })
 
-  it('소유자 정보가 없으면 읽을 수 있다고 가정하지 않는다', async () => {
+  it('소유자 정보가 아예 없으면 막지 않는다 — 잘못 막는 쪽이 더 큰 손해다', async () => {
+    // 틀렸을 때 비용이 비대칭이다: 잘못 막으면 내 재생목록을 옮길 길이 없고(치명적),
+    // 잘못 열면 403 이 한 번 나고 안내하면 끝이다(복구 가능).
     const http = fakeHttp(listing([undefined]))
     const [, unknown] = await new SpotifyAdapter(http).listPlaylists()
 
-    expect(unknown?.owned).toBe(false)
+    expect(unknown?.owned).toBe(true)
+  })
+
+  it('owner.id 가 안 와도 표시 이름으로 내 것을 알아본다', async () => {
+    // 2026-02 마이그레이션에서 응답 필드가 여럿 깎였다. id 가 없다고 내 재생목록을
+    // 남의 것으로 떨어뜨리면 안 된다.
+    const http = fakeHttp({
+      '/me': { id: 'me1', display_name: '김지환' },
+      '/me/tracks': { items: [], next: null, total: 0 },
+      '/me/playlists': {
+        items: [{ id: 'p0', name: '출근길', owner: { display_name: '김지환' }, items: { total: 3 } }],
+        next: null,
+      },
+    })
+
+    const [, mine] = await new SpotifyAdapter(http).listPlaylists()
+    expect(mine?.owned).toBe(true)
   })
 })

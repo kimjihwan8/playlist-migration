@@ -64,7 +64,7 @@ export function toTargetTrack(t: SpotifyTrack): TargetTrack | null {
   }
 }
 
-export function toSourcePlaylist(p: SpotifyPlaylist, meId: string): SourcePlaylist {
+export function toSourcePlaylist(p: SpotifyPlaylist, me: SpotifyUser): SourcePlaylist {
   return {
     id: p.id,
     name: p.name,
@@ -72,9 +72,25 @@ export function toSourcePlaylist(p: SpotifyPlaylist, meId: string): SourcePlayli
     trackCount: p.items?.total ?? 0,
     cover: p.images?.[0]?.url ?? null,
     kind: 'playlist',
-    // 소유자 ID 로만 판정한다. 표시 이름은 중복될 수 있어 신뢰할 수 없다.
-    owned: Boolean(p.owner?.id) && p.owner?.id === meId,
+    owned: isOwnedBy(p, me),
   }
+}
+
+/**
+ * 내 재생목록인가.
+ *
+ * **확실할 때만 '아니다'라고 한다.** 판정 근거가 없으면 내 것으로 본다 —
+ * 틀렸을 때의 비용이 비대칭이기 때문이다.
+ *   잘못 막으면: 내 재생목록을 옮길 방법이 없다(치명적, 사용자는 원인도 모른다)
+ *   잘못 열면:   403 이 한 번 나고 "가져올 수 없다"고 안내하면 끝이다(복구 가능)
+ *
+ * 2026-02 마이그레이션에서 응답 필드가 여럿 깎여서 `owner.id` 가 없는 경우가 있다.
+ * 그래서 ID → 표시 이름 순으로 보고, 둘 다 없으면 막지 않는다.
+ */
+function isOwnedBy(p: SpotifyPlaylist, me: SpotifyUser): boolean {
+  if (p.owner?.id && me.id) return p.owner.id === me.id
+  if (p.owner?.display_name && me.display_name) return p.owner.display_name === me.display_name
+  return true
 }
 
 /** "좋아하는 노래"는 재생목록이 아니지만 곡 단위라 가상 재생목록으로 끼워넣는다. */

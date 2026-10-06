@@ -13,9 +13,19 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
+    /**
+     * 서버가 함께 보낸 본문. Spotify 실패는 502 로 감싸 오므로
+     * **진짜 원인(403 인지 429 인지)은 여기에만 있다.**
+     */
+    readonly detail: { status?: number; kind?: string } = {},
   ) {
     super(`${code} (${status})`)
     this.name = 'ApiError'
+  }
+
+  /** 권한 문제인가 — 다시 시도해도 소용없고, 사용자에게 이유를 설명해야 하는 종류. */
+  get forbidden(): boolean {
+    return this.status === 403 || this.detail.status === 403
   }
 }
 
@@ -28,8 +38,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   })
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string }
-    throw new ApiError(res.status, body.error ?? 'unknown')
+    const body = (await res.json().catch(() => ({}))) as {
+      error?: string
+      status?: number
+      kind?: string
+    }
+    throw new ApiError(res.status, body.error ?? 'unknown', body)
   }
   return (await res.json()) as T
 }

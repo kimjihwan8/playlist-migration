@@ -16,7 +16,7 @@ import { BackLink } from '../../components/BackLink'
 import { TopBar } from '../../components/TopBar'
 import { Footer } from '../../components/Footer'
 import { Stepper } from '../../components/Stepper'
-import { fetchPlaylistTracks, fetchPlaylists } from '../../lib/api-client'
+import { ApiError, fetchPlaylistTracks, fetchPlaylists } from '../../lib/api-client'
 import { platformById } from '../../lib/platforms'
 import { coverStyle } from '../../lib/cover'
 import { isPicked, isTrackPicked, pickedCount, totalPicked, type Pick } from '../../lib/selection'
@@ -45,8 +45,13 @@ export function BrowseSourceScreen() {
   // 여러 개를 동시에 펼쳐둘 수 있다 — 곡을 비교하며 고르는 게 이 화면의 목적이라서.
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
   const [query, setQuery] = useState('')
-  // 곡을 불러오지 못한 재생목록. 빈 재생목록과 구분해야 한다.
-  const [failed, setFailed] = useState<ReadonlySet<string>>(new Set())
+  /**
+   * 곡을 불러오지 못한 재생목록과 그 이유.
+   * 'forbidden' = 내 재생목록이 아니라 읽을 권한이 없다(다시 시도해도 같다).
+   * 'error'     = 그 밖의 실패(일시적일 수 있다).
+   * 빈 재생목록과도 구분해야 한다 — 사용자에게 완전히 다른 상태다.
+   */
+  const [failed, setFailed] = useState<Record<string, 'forbidden' | 'error'>>({})
 
   useEffect(() => {
     if (!sourceAccount || playlists.length > 0) return
@@ -74,7 +79,9 @@ export function BrowseSourceScreen() {
   const totalTracks = totalPicked(playlists, picks)
   // 못 읽는 재생목록은 "전체"에서 빠진다. 안 그러면 전체 선택이 영원히 완료되지 않아
   // 한 번 더 눌러도 해제가 안 된다.
-  const selectable = playlists.filter((p) => p.owned)
+  // 미리 아는 경우(owned=false)와 열어보고 알게 된 경우(403)를 함께 잠근다.
+  const isLocked = (p: Playlist) => !p.owned || failed[p.id] === 'forbidden'
+  const selectable = playlists.filter((p) => !isLocked(p))
   const pickedListCount = playlists.filter((p) => isPicked(picks[p.id])).length
   const allPicked = selectable.length > 0 && pickedListCount === selectable.length
 
@@ -86,7 +93,7 @@ export function BrowseSourceScreen() {
   }
 
   const togglePlaylist = (p: Playlist) => {
-    if (!p.owned) return
+    if (isLocked(p)) return
     setPick(p.id, isPicked(picks[p.id]) ? null : { mode: 'all' })
   }
 
@@ -99,7 +106,8 @@ export function BrowseSourceScreen() {
 
   const toggleExpand = (playlistId: string) => {
     // 읽을 수 없는 재생목록은 열지 않는다 — 열면 403 이고, 그걸 사용자에게 보여줄 이유가 없다.
-    if (playlists.find((p) => p.id === playlistId)?.owned === false) return
+    const target = playlists.find((p) => p.id === playlistId)
+    if (target && isLocked(target)) return
 
     const next = new Set(expanded)
     if (next.has(playlistId)) next.delete(playlistId)
@@ -109,11 +117,14 @@ export function BrowseSourceScreen() {
     if (!tracksByPlaylist[playlistId]) {
       fetchPlaylistTracks(playlistId)
         .then((list) => set({ tracksByPlaylist: { ...tracksByPlaylist, [playlistId]: list } }))
-        .catch(() => {
+        .catch((err: unknown) => {
           // 실패해도 빈 목록으로 확정한다. 안 그러면 스피너가 영원히 돈다
           // — "로딩 중"과 "불러오지 못함"은 사용자에게 완전히 다른 상태다.
-          setFailed((prev) => new Set(prev).add(playlistId))
+          const forbidden = err instanceof ApiError && err.forbidden
+          setFailed((prev) => ({ ...prev, [playlistId]: forbidden ? 'forbidden' : 'error' }))
           set({ tracksByPlaylist: { ...tracksByPlaylist, [playlistId]: [] } })
+          // 못 읽는 재생목록을 고른 채로 두면 다음 단계에서 빈 작업이 된다.
+          if (forbidden) setPick(playlistId, null)
         })
     }
   }
@@ -144,15 +155,16 @@ export function BrowseSourceScreen() {
     const state = count === 0 ? 'off' : count === p.trackCount ? 'on' : 'partial'
     const tracks = tracksByPlaylist[p.id]
     const open = expanded.has(p.id)
+    const locked = isLocked(p)
 
     return (
       <div key={p.id}>
         {/* 행 전체가 펼치기 버튼이다. 체크박스만 이벤트를 가로챈다. */}
         <div
-          className={`tree-row${count > 0 ? ' picked' : ''}${p.owned ? '' : ' locked'}`}
+          className={`tree-row${count > 0 ? ' picked' : ''}${locked ? ' locked' : ''}`}
           role="button"
-          tabIndex={p.owned ? 0 : -1}
-          aria-disabled={!p.owned}
+          tabIndex={locked ? -1 : 0}
+          aria-disabled={locked}
           aria-expanded={open}
           onClick={() => toggleExpand(p.id)}
           onKeyDown={(e) => {
@@ -182,18 +194,18 @@ export function BrowseSourceScreen() {
           <span className="tree-meta">
             <strong>{p.name}</strong>
             <span>
-              {p.owned ? (
-                `${count}/${p.trackCount}곡 선택됨`
-              ) : (
+              {locked ? (
                 /* 숨기지 않고 이유를 적는다 — 목록에서 사라지면 "왜 내 플리가 없지"가 된다 */
                 <>
-                  <Lock size={11} /> {p.owner}님의 재생목록이라 가져올 수 없어요
+                  <Lock size={11} /> 내가 만든 재생목록만 가져올 수 있어요
                 </>
+              ) : (
+                `${count}/${p.trackCount}곡 선택됨`
               )}
             </span>
           </span>
 
-          {p.owned && (
+          {!locked && (
             <span className="tree-toggle" aria-hidden="true">
               {open ? <ChevronDown size={19} /> : <ChevronRight size={19} />}
             </span>
@@ -206,7 +218,9 @@ export function BrowseSourceScreen() {
               <div className="track-loading">
                 <Loader2 size={15} className="spin" /> 곡을 불러오는 중
               </div>
-            ) : failed.has(p.id) ? (
+            ) : failed[p.id] === 'forbidden' ? (
+              <div className="track-loading">내가 만든 재생목록만 가져올 수 있어요</div>
+            ) : failed[p.id] ? (
               <div className="track-loading">곡을 불러오지 못했어요</div>
             ) : tracks.length === 0 ? (
               <div className="track-loading">곡이 없는 재생목록이에요</div>
