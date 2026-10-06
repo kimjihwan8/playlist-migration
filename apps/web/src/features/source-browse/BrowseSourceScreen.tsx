@@ -18,7 +18,7 @@ import { Stepper } from '../../components/Stepper'
 import { fetchPlaylistTracks, fetchPlaylists } from '../../lib/api-client'
 import { platformById } from '../../lib/platforms'
 import { coverStyle } from '../../lib/cover'
-import { isTrackPicked, pickedCount, totalPicked, type Pick } from '../../lib/selection'
+import { isPicked, isTrackPicked, pickedCount, totalPicked, type Pick } from '../../lib/selection'
 import { useTransfer } from '../../lib/transfer-store'
 import type { Playlist } from '../../lib/types'
 import './browse.css'
@@ -69,7 +69,7 @@ export function BrowseSourceScreen() {
   )
 
   const totalTracks = totalPicked(playlists, picks)
-  const pickedListCount = playlists.filter((p) => pickedCount(p, picks[p.id]) > 0).length
+  const pickedListCount = playlists.filter((p) => isPicked(picks[p.id])).length
   const allPicked = playlists.length > 0 && pickedListCount === playlists.length
 
   const setPick = (playlistId: string, pick: Pick | null) => {
@@ -80,7 +80,7 @@ export function BrowseSourceScreen() {
   }
 
   const togglePlaylist = (p: Playlist) =>
-    setPick(p.id, pickedCount(p, picks[p.id]) > 0 ? null : { mode: 'all' })
+    setPick(p.id, isPicked(picks[p.id]) ? null : { mode: 'all' })
 
   const toggleAll = () =>
     set({
