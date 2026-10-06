@@ -21,7 +21,13 @@ describe('seal / unseal', () => {
 
   it('한 글자라도 고치면 null — GCM 이 변조를 잡는다', async () => {
     const sealed = await seal({ a: 1 }, SECRET)
-    const tampered = sealed.slice(0, -1) + (sealed.endsWith('A') ? 'B' : 'A')
+    // 끝자리가 아니라 **가운데** 글자를 바꾼다.
+    // base64url 의 마지막 글자는 쓰이지 않는 비트를 포함할 수 있어, 글자가 달라도
+    // 같은 바이트로 디코딩되는 경우가 있다 — 끝자리를 건드리면 테스트가 간헐적으로 통과한다.
+    const i = Math.floor(sealed.length / 2)
+    const tampered = sealed.slice(0, i) + (sealed[i] === 'A' ? 'B' : 'A') + sealed.slice(i + 1)
+
+    expect(tampered).not.toBe(sealed)
     expect(await unseal(tampered, SECRET)).toBeNull()
   })
 
