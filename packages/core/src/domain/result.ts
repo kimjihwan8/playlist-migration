@@ -5,7 +5,17 @@ import type { SourceTrack, TargetTrack } from './track'
  * (ISRC 몇 %, 계단식이 몇 %를 더 건졌는가).
  * P1 은 'ISRC' 만 생산한다 — 나머지는 전략이 추가되면서 채워진다.
  */
-export type MatchMethod = 'ISRC' | 'FUZZY_AUTO' | 'FUZZY_MANUAL' | 'AI'
+export type MatchMethod =
+  | 'ISRC'
+  | 'FUZZY_AUTO'
+  | 'FUZZY_MANUAL'
+  | 'AI'
+  /**
+   * 매칭을 하지 않았다는 뜻.
+   * 파일로 내보내는 타겟은 **대조할 카탈로그가 없다** — 소스 곡을 그대로 담는다.
+   * 'MATCHED 100%' 로 보이지만 매칭 성능 지표에서는 빼야 하므로 이름을 따로 둔다.
+   */
+  | 'EXPORT'
 
 /**
  * 왜 못 찾았는가. 자유 텍스트가 아니라 열거형이어야 집계와 분기가 된다

@@ -10,7 +10,8 @@
   "dependencies": {
     "@pm/adapter-spotify": "workspace:*",
     "@pm/core": "workspace:*",
-    "hono": "^4.6.0"
+    "hono": "^4.6.0",
+    "@pm/adapter-csv": "workspace:*"
   },
   "devDependencies": {
     "@hono/node-server": "^1.13.0",

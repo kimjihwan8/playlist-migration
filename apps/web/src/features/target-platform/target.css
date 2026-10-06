@@ -122,3 +122,10 @@
   .name-origin { width: 92px; }
   .name-row input, .liked-note { min-width: 100%; }
 }
+
+/* 고를 게 하나뿐인 목적지. 선택 상자처럼 보이면 거짓 선택지가 된다. */
+.dest-fixed {
+  color: var(--text-dim);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}

@@ -95,9 +95,15 @@ export class SpotifyAdapter implements SourceAdapter, TargetAdapter {
   }
 
   async write(destination: Destination, tracks: readonly TargetTrack[]): Promise<WrittenDestination> {
-    return destination.type === 'liked'
-      ? this.writeToLibrary(tracks)
-      : this.writeToNewPlaylist(destination, tracks)
+    switch (destination.type) {
+      case 'liked':
+        return this.writeToLibrary(tracks)
+      case 'new':
+        return this.writeToNewPlaylist(destination, tracks)
+      default:
+        // 파일 목적지는 CSV 어댑터의 몫이다. 여기까지 왔다면 타겟을 잘못 고른 것이다.
+        throw new Error(`Spotify 타겟이 다룰 수 없는 목적지: ${destination.type}`)
+    }
   }
 
   private async writeToNewPlaylist(

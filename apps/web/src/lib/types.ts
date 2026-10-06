@@ -38,9 +38,13 @@ export type SourceTrack = {
  * - 'liked': "좋아하는 노래"에 넣는다. 집합 연산이라 중복이 안 생겨 멱등성 처리가 따로 필요 없다.
  *            (기존 재생목록에 추가는 중복 제거가 필요해서 P2로 미뤘다)
  */
-export type Destination = { type: 'new'; name: string } | { type: 'liked' }
+export type Destination =
+  | { type: 'new'; name: string }
+  | { type: 'liked' }
+  /** 파일로 내려받는다. 계정도 권한도 필요 없는 유일한 목적지. */
+  | { type: 'file'; name: string }
 
-export type MatchMethod = 'ISRC' | 'FUZZY_AUTO' | 'FUZZY_MANUAL'
+export type MatchMethod = 'ISRC' | 'FUZZY_AUTO' | 'FUZZY_MANUAL' | 'EXPORT'
 
 export type FailureReason = 'NO_SOURCE_ISRC' | 'NOT_FOUND_IN_TARGET'
 
@@ -60,8 +64,14 @@ export type FailedTrack = {
 export type TrackResult = MatchedTrack | FailedTrack
 
 export type TransferResult = {
-  /** 타겟에 만들어진 재생목록 / 좋아하는 노래에 담긴 결과 */
-  destinations: Array<{ label: string; kind: 'new' | 'liked'; url: string }>
+  /** 타겟에 만들어진 재생목록 / 좋아하는 노래 / 내려받을 파일 */
+  destinations: Array<{
+    label: string
+    kind: 'new' | 'liked' | 'file'
+    url: string
+    /** 파일 목적지일 때만. 서버가 들고 있을 이유가 없어 응답에 실려 온다. */
+    download?: { filename: string; mimeType: string; content: string }
+  }>
   tracks: TrackResult[]
 }
 
@@ -75,4 +85,6 @@ export const METHOD_LABEL: Record<MatchMethod, string> = {
   ISRC: '정확히 일치',
   FUZZY_AUTO: '비슷한 곡으로 찾음',
   FUZZY_MANUAL: '직접 고른 곡',
+  // 매칭을 한 게 아니라 그대로 내보낸 것이다. 매칭률 지표와 섞이면 안 된다.
+  EXPORT: '파일로 내보냄',
 }

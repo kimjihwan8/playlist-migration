@@ -29,13 +29,21 @@ export type Destination =
   | { type: 'new'; name: string; description: string }
   /** "좋아하는 노래"에 넣는다. 집합 연산이라 중복이 안 생겨 멱등성 처리가 따로 필요 없다. */
   | { type: 'liked' }
+  /** 파일로 내보낸다. 계정도 권한도 필요 없는 유일한 목적지. */
+  | { type: 'file'; format: 'csv'; name: string }
 
 export type WrittenDestination = {
-  /** 타겟에서 만들어졌거나 쓰여진 곳. liked 는 플랫폼이 ID 를 주지 않아 null. */
+  /** 타겟에서 만들어졌거나 쓰여진 곳. liked 와 파일은 ID 가 없어 null. */
   id: string | null
   label: string
-  kind: 'new' | 'liked'
+  kind: 'new' | 'liked' | 'file'
+  /** 사람이 열 수 있는 링크. 파일 목적지에는 열 주소가 없어 빈 문자열이다. */
   url: string
+  /**
+   * 파일로 내보낸 결과. 서버가 들고 있을 이유가 없어 응답에 실어 보내고
+   * 브라우저가 내려받는다 — P1 은 저장소가 없다는 사실과도 맞는다.
+   */
+  download?: { filename: string; mimeType: string; content: string }
 }
 
 /** 소스에서 읽는 쪽. */
@@ -64,6 +72,15 @@ export interface SearchPort {
 
 /** 타겟에 쓰는 쪽. */
 export interface TargetAdapter extends SearchPort {
+  /**
+   * 대조할 카탈로그가 없는 타겟인가(파일 내보내기 등).
+   *
+   * true 면 매칭 단계를 건너뛰고 소스 곡을 그대로 담는다.
+   * 이게 없으면 CSV 타겟은 searchByIsrc 가 늘 빈 배열이라 **모든 곡이 실패**로 떨어진다
+   * — 찾지 못한 게 아니라 찾을 곳이 없는 것인데도.
+   */
+  readonly passthrough?: boolean
+
   /**
    * 찾아낸 곡을 목적지에 쓴다. 식별자 문자열이 아니라 TargetTrack 을 통째로 받는 이유:
    * 플랫폼마다 쓰기에 요구하는 식별자가 다르다(Spotify 는 재생목록엔 uri, 좋아하는 노래엔 id).

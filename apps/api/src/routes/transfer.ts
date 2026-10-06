@@ -1,6 +1,15 @@
 import { Hono } from 'hono'
-import { matchAll, sourceNote, type Destination, type MatchResult, type SourceTrack, type TargetTrack } from '@pm/core'
-import { adapterFor } from '../lib/adapters'
+import {
+  exportResults,
+  matchAll,
+  sourceNote,
+  type Destination,
+  type MatchResult,
+  type SourceTrack,
+  type TargetTrack,
+  type WrittenDestination,
+} from '@pm/core'
+import { adapterFor, targetAdapterFor } from '../lib/adapters'
 import { loadEnv, type Env } from '../lib/env'
 
 /** 화면이 그대로 렌더링하는 모양. 내부 용어(ISRC)는 라벨링을 프론트에 맡긴다. */
@@ -16,7 +25,7 @@ type TrackResult =
 type TransferItem = {
   playlistId: string
   trackIds: 'all' | string[]
-  destination: { type: 'new'; name: string } | { type: 'liked' }
+  destination: { type: 'new'; name: string } | { type: 'liked' } | { type: 'file'; name: string }
 }
 
 export function transferRoutes(env: Env = loadEnv()) {
@@ -28,17 +37,17 @@ export function transferRoutes(env: Env = loadEnv()) {
    * 이 한계에 실제로 부딪히는 것이 P2(비동기 워커 + 폴링)의 명분이므로 지금 피해가지 않는다.
    */
   app.post('/', async (c) => {
-    const body = await c.req.json<{ items: TransferItem[] }>()
+    const body = await c.req.json<{ items: TransferItem[]; targetPlatform?: string }>()
     const items = body.items ?? []
     if (items.length === 0) return c.json({ error: '옮길 재생목록이 없다' }, 400)
 
     const source = await adapterFor(c, env, 'source')
-    const target = await adapterFor(c, env, 'target')
+    const target = await targetAdapterFor(c, env, body.targetPlatform ?? 'spotify')
 
     // 설명에 넣을 원본 이름·소유자를 알아야 해서 목록을 한 번 읽는다.
     const playlists = await source.listPlaylists()
 
-    const destinations = []
+    const destinations: WrittenDestination[] = []
     const tracks: TrackResult[] = []
 
     for (const item of items) {
@@ -58,7 +67,12 @@ export function transferRoutes(env: Env = loadEnv()) {
       const picked: SourceTrack[] =
         item.trackIds === 'all' ? all : all.filter((t) => item.trackIds.includes(t.id))
 
-      const results = await matchAll(picked, target)
+      /**
+       * 대조할 카탈로그가 없는 타겟(CSV)은 매칭을 건너뛴다.
+       * 돌려봐야 전부 NOT_FOUND_IN_TARGET 으로 떨어지는데, 그건 거짓이다 —
+       * 못 찾은 게 아니라 찾을 곳이 없는 것이다.
+       */
+      const results = target.passthrough ? exportResults(picked) : await matchAll(picked, target)
       tracks.push(...results.map(toTrackResult))
 
       // 찾은 곡만, 원래 순서대로 쓴다.
@@ -81,6 +95,9 @@ function destinationFor(
   kind: 'playlist' | 'liked',
 ): Destination {
   if (item.destination.type === 'liked') return { type: 'liked' }
+  if (item.destination.type === 'file') {
+    return { type: 'file', format: 'csv', name: item.destination.name || name }
+  }
   return {
     type: 'new',
     name: item.destination.name,

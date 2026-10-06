@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router'
 import {
   AlertCircle,
   ArrowRight,
+  FileDown,
   ExternalLink,
   Heart,
   ListMusic,
@@ -27,10 +28,24 @@ const METHOD_COLOR: Record<MatchMethod, string> = {
   ISRC: 'var(--success)',
   FUZZY_AUTO: 'var(--accent)',
   FUZZY_MANUAL: '#6aa9d8',
+  // 매칭이 아니라 그대로 내보낸 것이라 중립색을 쓴다 — 성공처럼 보이면 지표를 오해하게 된다.
+  EXPORT: '#8a8496',
 }
 const FAILED_COLOR = 'var(--surface-3)'
 
 const pct = (n: number, total: number) => (total ? Math.round((n / total) * 100) : 0)
+
+/** 응답에 담겨 온 파일을 브라우저가 내려받게 한다. 끝나면 URL 을 반드시 해제한다 — 안 하면 샌다. */
+function download({ filename, mimeType, content }: { filename: string; mimeType: string; content: string }) {
+  // \uFEFF(BOM): Excel 이 UTF-8 CSV 를 열 때 한글을 깨뜨리지 않게 하는 사실상 유일한 방법이다.
+  const blob = new Blob(['\uFEFF', content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 function ResultRow({ track, fresh }: { track: TrackResult; fresh: boolean }) {
   return (
@@ -140,7 +155,7 @@ export function TransferScreen() {
       return {
         playlistId: p.id,
         trackIds: pick.mode === 'all' ? 'all' : pick.trackIds,
-        destination: destinationOf(p, destinations),
+        destination: destinationOf(p, destinations, targetPlatform ?? undefined),
       }
     })
 
@@ -238,13 +253,23 @@ export function TransferScreen() {
         ) : (
           <div className="created-list">
             <div className="created-title">곡이 담긴 곳 {result.destinations.length}개</div>
-            {result.destinations.map((d) => (
-              <a className="created-row" key={d.label} href={d.url}>
-                {d.kind === 'liked' ? <Heart size={16} fill="currentColor" /> : <ListMusic size={16} />}
-                <span>{d.label}</span>
-                <ExternalLink size={15} />
-              </a>
-            ))}
+            {result.destinations.map((d) =>
+              d.download ? (
+                /* 파일은 열 주소가 없다. 응답에 실려 온 내용을 그 자리에서 Blob 으로 만들어 내려준다
+                   — 서버가 파일을 들고 있을 이유가 없고, P1 에 저장소가 없다는 사실과도 맞는다. */
+                <button className="created-row" key={d.label} onClick={() => download(d.download!)}>
+                  <FileDown size={16} />
+                  <span>{d.download.filename}</span>
+                  <span className="created-action">내려받기</span>
+                </button>
+              ) : (
+                <a className="created-row" key={d.label} href={d.url}>
+                  {d.kind === 'liked' ? <Heart size={16} fill="currentColor" /> : <ListMusic size={16} />}
+                  <span>{d.label}</span>
+                  <ExternalLink size={15} />
+                </a>
+              ),
+            )}
           </div>
         )}
 

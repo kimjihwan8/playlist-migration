@@ -1,4 +1,6 @@
 import type { Context } from 'hono'
+import type { TargetAdapter } from '@pm/core'
+import { CsvTargetAdapter } from '@pm/adapter-csv'
 import { SpotifyAdapter, SpotifyHttp } from '@pm/adapter-spotify'
 import type { Env } from './env'
 import { getSession, setSession, type Role } from './session'
@@ -27,4 +29,19 @@ export async function adapterFor(c: Context, env: Env, role: Role): Promise<Spot
     onTokens: async (tokens) => setSession(c, env, role, { ...session, tokens }),
   })
   return new SpotifyAdapter(http)
+}
+
+/**
+ * 타겟 어댑터를 고른다.
+ *
+ * CSV 는 **세션을 요구하지 않는다** — 계정도 권한도 없는 목적지다.
+ * 이 분기가 한 줄인 것이 어댑터 패턴이 값을 하는 지점이다.
+ */
+export async function targetAdapterFor(
+  c: Context,
+  env: Env,
+  platform: string,
+): Promise<TargetAdapter> {
+  if (platform === 'csv') return new CsvTargetAdapter()
+  return adapterFor(c, env, 'target')
 }

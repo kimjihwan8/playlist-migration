@@ -251,3 +251,17 @@
   .results-actions { justify-content: stretch; }
   .results-actions .btn { flex: 1; }
 }
+
+/* 파일 내려받기 행. 링크가 아니라 버튼이라 기본 버튼 스타일을 지운다. */
+button.created-row {
+  width: 100%;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.created-action {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: var(--text-xs);
+}

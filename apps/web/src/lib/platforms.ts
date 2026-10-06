@@ -48,10 +48,12 @@ export const PLATFORMS: PlatformInfo[] = [
   {
     id: 'csv',
     name: 'CSV 파일',
-    tagline: 'title, artist 컬럼만 있으면 돼요',
+    // 로그인이 필요 없는 유일한 목적지라, 계정을 연결할 수 없는 사람도 결과를 받아갈 수 있다.
+    tagline: '로그인 없이 파일로 내려받아요',
     accent: '#8a8496',
-    available: false,
-    roles: ['source', 'target'],
+    available: true,
+    // 소스로 읽는 것(파일 업로드)은 아직이다. 지금은 내보내기만.
+    roles: ['target'],
     connect: 'file',
   },
 ]

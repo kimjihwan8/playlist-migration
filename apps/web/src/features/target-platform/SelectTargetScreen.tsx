@@ -9,7 +9,7 @@ import { PlatformCard } from '../../components/PlatformCard'
 import { PLATFORMS, platformById, type PlatformId } from '../../lib/platforms'
 import { connectPlatform } from '../../lib/api-client'
 import { coverStyle } from '../../lib/cover'
-import { destinationOf } from '../../lib/destination'
+import { destinationOf, needsAccount } from '../../lib/destination'
 import { pickedCount, pickedPlaylists, totalPicked } from '../../lib/selection'
 import { useTransfer } from '../../lib/transfer-store'
 import './target.css'
@@ -32,6 +32,11 @@ export function SelectTargetScreen() {
   const totalTracks = totalPicked(playlists, picks)
 
   const pick = async (id: PlatformId) => {
+    // 파일로 내보내는 타겟은 연결할 계정이 없다 — 고르는 즉시 끝이다.
+    if (!needsAccount(id)) {
+      set({ targetPlatform: id, targetAccount: null })
+      return
+    }
     setConnecting(id)
     try {
       const account = await connectPlatform(id, 'target')
@@ -44,7 +49,7 @@ export function SelectTargetScreen() {
   if (!hydrated) return null
   if (!sourcePlatform || chosen.length === 0) return <Navigate to="/?error=nothing_picked" replace />
 
-  const connected = Boolean(targetPlatform && targetAccount)
+  const connected = Boolean(targetPlatform) && (!needsAccount(targetPlatform) || Boolean(targetAccount))
 
   return (
     <div className="screen-shell">
@@ -95,7 +100,7 @@ export function SelectTargetScreen() {
               <div className="name-list">
                 <label>옮긴 곡을 어디에 넣을까요?</label>
                 {chosen.map((p) => {
-                  const dest = destinationOf(p, destinations)
+                  const dest = destinationOf(p, destinations, targetPlatform ?? undefined)
                   return (
                     <div className="name-row" key={p.id}>
                       <span className="name-cover" style={coverStyle(p.cover)}>
@@ -107,49 +112,56 @@ export function SelectTargetScreen() {
                       </span>
                       <ArrowRight size={14} />
 
-                      <select
-                        className="dest-select"
-                        value={dest.type}
-                        aria-label={`${p.name}을 어디에 넣을지`}
-                        onChange={(e) =>
-                          set({
-                            destinations: {
-                              ...destinations,
-                              [p.id]:
-                                e.target.value === 'liked'
-                                  ? { type: 'liked' }
-                                  : { type: 'new', name: p.name },
-                            },
-                          })
-                        }
-                      >
-                        <option value="new">새 재생목록</option>
-                        <option value="liked">좋아하는 노래</option>
-                      </select>
+                      {dest.type === 'file' ? (
+                        /* 파일 타겟에는 "좋아하는 노래" 같은 목적지 개념이 없다.
+                           고를 게 하나뿐인데 선택 상자를 두면 거짓 선택지가 된다. */
+                        <span className="dest-fixed">CSV 파일</span>
+                      ) : (
+                        <select
+                          className="dest-select"
+                          value={dest.type}
+                          aria-label={`${p.name}을 어디에 넣을지`}
+                          onChange={(e) =>
+                            set({
+                              destinations: {
+                                ...destinations,
+                                [p.id]:
+                                  e.target.value === 'liked'
+                                    ? { type: 'liked' }
+                                    : { type: 'new', name: p.name },
+                              },
+                            })
+                          }
+                        >
+                          <option value="new">새 재생목록</option>
+                          <option value="liked">좋아하는 노래</option>
+                        </select>
+                      )}
 
-                      {dest.type === 'new' ? (
+                      {dest.type === 'liked' ? (
+                        <span className="liked-note">이미 담긴 곡은 그대로 둬요</span>
+                      ) : (
                         <input
                           value={dest.name}
                           onChange={(e) =>
                             set({
                               destinations: {
                                 ...destinations,
-                                [p.id]: { type: 'new', name: e.target.value },
+                                [p.id]: { ...dest, name: e.target.value },
                               },
                             })
                           }
                           placeholder={p.name}
-                          aria-label={`${p.name}의 새 이름`}
+                          aria-label={dest.type === 'file' ? `${p.name}의 파일 이름` : `${p.name}의 새 이름`}
                         />
-                      ) : (
-                        <span className="liked-note">이미 담긴 곡은 그대로 둬요</span>
                       )}
                     </div>
                   )
                 })}
                 <p className="name-hint">
-                  새 재생목록은 비공개로 만들고, 설명에 원본 정보를 남겨요. 기존 재생목록에 합치는
-                  건 아직 지원하지 않아요.
+                  {targetPlatform === 'csv'
+                    ? 'title, artist, album, isrc, duration_ms 컬럼으로 내보내요. 매칭은 하지 않고 원본 그대로 담아요.'
+                    : '새 재생목록은 비공개로 만들고, 설명에 원본 정보를 남겨요. 기존 재생목록에 합치는 건 아직 지원하지 않아요.'}
                 </p>
               </div>
 
