@@ -27,6 +27,7 @@ export type SourceTrack = {
   artist: string
   album: string | null
   durationMs: number | null
+  cover: string | null
   /** null이면 ISRC 매칭을 건너뛰고 바로 실패한다(P1 기준) */
   isrc: string | null
 }

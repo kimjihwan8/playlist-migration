@@ -9,7 +9,7 @@ export type SpotifyTrack = {
   is_local?: boolean
   duration_ms: number | null
   artists: Array<{ name: string }>
-  album?: { name?: string; images?: Array<{ url: string }> } | null
+  album?: { name?: string; images?: Array<{ url: string; width?: number }> } | null
   external_ids?: { isrc?: string } | null
   external_urls?: { spotify?: string } | null
 }
@@ -35,6 +35,20 @@ export type SpotifyUser = {
  */
 const artistsOf = (t: SpotifyTrack) => t.artists.map((a) => a.name).join(', ')
 
+/**
+ * 목록 한 줄에 들어갈 커버를 고른다.
+ *
+ * Spotify 는 큰 것부터 작은 것 순(640/300/64)으로 준다. 44px 짜리 칸에
+ * 640px 이미지를 넣으면 수백 곡일 때 네트워크와 디코딩이 전부 낭비다.
+ * 그래서 **가장 작은 것**을 쓴다. 크기 정보가 없으면 마지막 것으로 둔다.
+ */
+function thumbOf(images: Array<{ url: string; width?: number }> | undefined): string | null {
+  if (!images?.length) return null
+  const sized = images.filter((i) => typeof i.width === 'number')
+  if (sized.length === 0) return images[images.length - 1]?.url ?? null
+  return sized.reduce((min, i) => (i.width! < min.width! ? i : min)).url
+}
+
 export function toSourceTrack(t: SpotifyTrack, fallbackId: string): SourceTrack {
   return {
     // 로컬 파일은 id 가 null 이다. 버리지 않고 합성 ID 로 통과시킨다 —
@@ -45,6 +59,7 @@ export function toSourceTrack(t: SpotifyTrack, fallbackId: string): SourceTrack 
     artist: artistsOf(t),
     album: t.album?.name ?? null,
     durationMs: t.duration_ms ?? null,
+    cover: thumbOf(t.album?.images),
     isrc: t.external_ids?.isrc ?? null,
   }
 }
@@ -59,7 +74,7 @@ export function toTargetTrack(t: SpotifyTrack): TargetTrack | null {
     album: t.album?.name ?? null,
     durationMs: t.duration_ms ?? null,
     isrc: t.external_ids?.isrc ?? null,
-    cover: t.album?.images?.[0]?.url ?? null,
+    cover: thumbOf(t.album?.images),
     url: t.external_urls?.spotify ?? `https://open.spotify.com/track/${t.id}`,
   }
 }

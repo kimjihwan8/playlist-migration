@@ -11,6 +11,8 @@ export type SourceTrack = {
   artist: string
   album: string | null
   durationMs: number | null
+  /** 앨범 커버. 매칭에는 쓰지 않고 화면 표시 전용이라 없어도 그만이다. */
+  cover: string | null
   /**
    * 국제표준녹음코드. null 이 흔하다 — 사용자가 올린 로컬 파일, 일부 지역 카탈로그.
    * null 이면 P1 에서는 매칭 불가(NO_SOURCE_ISRC)이고, P3 의 계단식 fuzzy 가 받아낸다.

@@ -59,7 +59,7 @@ const EMPTY: TransferState = {
  */
 // 저장 모양이 바뀌면 키를 올린다. 옛 데이터가 남아 'playlists 가 이미 있다'고
 // 착각하면 서버를 부르지 않아, 목 데이터를 띄우거나 빈 화면을 보여준다.
-const KEY = 'pm.transfer.v2'
+const KEY = 'pm.transfer.v3'
 
 /** 저장하지 않는 것: 계정은 서버가 진실이고, 곡 목록은 다시 받으면 되는 캐시다. */
 type Persisted = Pick<TransferState, 'sourcePlatform' | 'playlists' | 'picks' | 'destinations' | 'targetPlatform'>

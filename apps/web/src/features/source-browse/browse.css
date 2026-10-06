@@ -206,3 +206,15 @@
   gap: 4px;
   align-items: center;
 }
+
+/* 곡 커버. 목록용이라 작게 — 어댑터도 가장 작은 이미지를 골라 보낸다. */
+.track-cover {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background: var(--control-bg);
+  color: var(--text-dim);
+}

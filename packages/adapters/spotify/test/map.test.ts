@@ -50,3 +50,36 @@ describe('toTargetTrack', () => {
     expect(t?.url).toBe('https://open.spotify.com/track/t1')
   })
 })
+
+describe('커버 이미지 고르기', () => {
+  const withImages = (images: Array<{ url: string; width?: number }>) =>
+    track({ album: { name: 'Palette', images } })
+
+  it('목록용이라 가장 작은 이미지를 고른다', () => {
+    // 44px 칸에 640px 이미지를 넣으면 수백 곡일 때 전부 낭비다.
+    const t = toSourceTrack(
+      withImages([
+        { url: 'big', width: 640 },
+        { url: 'mid', width: 300 },
+        { url: 'small', width: 64 },
+      ]),
+      'x',
+    )
+    expect(t.cover).toBe('small')
+  })
+
+  it('크기 정보가 없으면 마지막 것을 쓴다 (작은 것부터 오지 않는다는 보장이 없다)', () => {
+    const t = toSourceTrack(withImages([{ url: 'a' }, { url: 'b' }]), 'x')
+    expect(t.cover).toBe('b')
+  })
+
+  it('커버가 없어도 깨지지 않는다 — 표시 전용이라 없어도 그만이다', () => {
+    expect(toSourceTrack(track({ album: null }), 'x').cover).toBeNull()
+    expect(toSourceTrack(withImages([]), 'x').cover).toBeNull()
+  })
+
+  it('타겟 곡도 같은 규칙을 쓴다', () => {
+    const t = toTargetTrack(withImages([{ url: 'big', width: 640 }, { url: 'small', width: 64 }]))
+    expect(t?.cover).toBe('small')
+  })
+})

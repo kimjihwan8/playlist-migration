@@ -8,6 +8,7 @@ export function sourceTrack(over: Partial<SourceTrack> = {}): SourceTrack {
     artist: '아이유',
     album: 'Palette',
     durationMs: 254_000,
+    cover: null,
     isrc: 'KRA382000001',
     ...over,
   }

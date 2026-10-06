@@ -53,15 +53,24 @@ export function BrowseSourceScreen() {
    */
   const [failed, setFailed] = useState<Record<string, 'forbidden' | 'error'>>({})
 
+  /**
+   * 들어올 때마다 **항상** 다시 불러온다.
+   *
+   * 저장해 둔 목록은 화면을 즉시 그리기 위한 캐시일 뿐 진실이 아니다.
+   * "있으면 안 부른다"로 두면, 서버 쪽 계산이 바뀌어도(예: 소유 판정 규칙)
+   * 옛 값이 영원히 남아 고친 것이 반영되지 않는다 — 실제로 그렇게 막혔다.
+   * 목록 조회는 싸고, 캐시는 로딩 스피너를 숨기는 용도로만 쓴다.
+   */
   useEffect(() => {
-    if (!sourceAccount || playlists.length > 0) return
+    if (!sourceAccount) return
     let alive = true
-    fetchPlaylists().then((list) => {
-      if (!alive) return
-      setLoading(false)
-      // 기본은 아무것도 선택 안 함 — 사용자가 고르는 게 이 화면의 목적이다.
-      set({ playlists: list })
-    })
+    fetchPlaylists()
+      .then((list) => {
+        if (!alive) return
+        // 기본은 아무것도 선택 안 함 — 사용자가 고르는 게 이 화면의 목적이다.
+        set({ playlists: list })
+      })
+      .finally(() => alive && setLoading(false))
     return () => {
       alive = false
     }
@@ -234,6 +243,9 @@ export function BrowseSourceScreen() {
                   onClick={() => toggleTrack(p, track.id)}
                 >
                   <Checkbox state={isTrackPicked(pick, track.id) ? 'on' : 'off'} />
+                  <span className="track-cover" style={coverStyle(track.cover)} aria-hidden="true">
+                    {!track.cover && <Music2 size={13} />}
+                  </span>
                   <span className="track-info">
                     <strong>{track.title}</strong>
                     <span>{track.artist}</span>
