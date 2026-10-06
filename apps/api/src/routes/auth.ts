@@ -94,15 +94,22 @@ export function authRoutes(env: Env = loadEnv()) {
     return c.redirect(landing[pkce.role])
   })
 
-  /** 연결된 계정 정보. 화면이 콜백에서 돌아온 뒤 이걸로 "누구로 연결됐는지"를 읽는다. */
+  /**
+   * 연결된 계정 정보. 화면이 콜백에서 돌아온 뒤 이걸로 "누구로 연결됐는지"를 읽는다.
+   *
+   * 연결이 안 돼 있어도 **200 + connected:false** 로 답한다.
+   * 이건 보호된 자원이 아니라 상태를 묻는 질문이고, 소스·타겟을 둘 다 물어보는
+   * 정상 흐름에서 한쪽은 늘 비어 있다. 401 로 답하면 매 로딩마다 콘솔에 빨간 줄이 남아
+   * 진짜 오류와 구분이 안 된다.
+   */
   app.get('/me', async (c) => {
     const role = c.req.query('role')
     if (!isRole(role)) return c.json({ error: 'role 이 필요하다' }, 400)
 
     const session = await getSession(c, env, role)
-    if (!session) return c.json({ error: 'not_connected' }, 401)
+    if (!session) return c.json({ connected: false })
 
-    return c.json({ platform: session.platform, account: session.account })
+    return c.json({ connected: true, platform: session.platform, account: session.account })
   })
 
   /** 계정 전환 — 같은 플랫폼의 다른 계정으로 바꿔 끼울 수 있어야 한다. */

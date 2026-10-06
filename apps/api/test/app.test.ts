@@ -82,7 +82,16 @@ describe('GET /api/auth/callback', () => {
 })
 
 describe('GET /api/auth/me', () => {
-  it('연결 전에는 401', async () => {
-    expect((await app.request('/api/auth/me?role=target')).status).toBe(401)
+  it('연결 전에도 200 — "연결 안 됨"은 오류가 아니라 상태다', async () => {
+    const res = await app.request('/api/auth/me?role=target')
+
+    // 소스·타겟을 둘 다 물어보는 정상 흐름에서 한쪽은 늘 비어 있다.
+    // 401 로 답하면 매 로딩마다 콘솔에 빨간 줄이 남아 진짜 오류와 구분이 안 된다.
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ connected: false })
+  })
+
+  it('role 이 없으면 400', async () => {
+    expect((await app.request('/api/auth/me')).status).toBe(400)
   })
 })

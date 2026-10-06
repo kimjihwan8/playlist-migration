@@ -3,6 +3,7 @@ import { SpotifyApiError } from '@pm/adapter-spotify'
 import { NotConnectedError } from './lib/adapters'
 import { loadEnv, type Env } from './lib/env'
 import { authRoutes } from './routes/auth'
+import { debugRoutes } from './routes/debug'
 import { playlistRoutes } from './routes/playlists'
 import { transferRoutes } from './routes/transfer'
 
@@ -20,6 +21,9 @@ export function createApp(env: Env = loadEnv()) {
   app.route('/auth', authRoutes(env))
   app.route('/playlists', playlistRoutes(env))
   app.route('/transfer', transferRoutes(env))
+
+  // 배포본에는 아예 올리지 않는다.
+  if (!env.isProd) app.route('/debug', debugRoutes(env))
 
   app.notFound((c) => c.json({ error: 'not_found' }, 404))
 

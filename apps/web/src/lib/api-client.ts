@@ -45,17 +45,21 @@ export function connectPlatform(platform: PlatformId, role: Role): Promise<never
   return new Promise<never>(() => {})
 }
 
-type MeResponse = { platform: PlatformId; account: { id: string; displayName: string; avatar: string | null } }
+type MeResponse =
+  | { connected: false }
+  | {
+      connected: true
+      platform: PlatformId
+      account: { id: string; displayName: string; avatar: string | null }
+    }
 
-/** 콜백에서 돌아온 뒤 "누구로 연결됐는지"를 서버에 묻는다. 연결 안 됐으면 null. */
+/**
+ * 콜백에서 돌아온 뒤 "누구로 연결됐는지"를 서버에 묻는다. 연결 안 됐으면 null.
+ * 연결 안 됨은 오류가 아니므로 서버도 200 으로 답한다 — 콘솔을 빨갛게 만들지 않는다.
+ */
 export async function fetchAccount(role: Role): Promise<{ platform: PlatformId; account: Account } | null> {
-  try {
-    const me = await request<MeResponse>(`/auth/me?role=${role}`)
-    return { platform: me.platform, account: toAccount(me.account) }
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 401) return null
-    throw err
-  }
+  const me = await request<MeResponse>(`/auth/me?role=${role}`)
+  return me.connected ? { platform: me.platform, account: toAccount(me.account) } : null
 }
 
 export async function disconnect(role: Role): Promise<void> {
