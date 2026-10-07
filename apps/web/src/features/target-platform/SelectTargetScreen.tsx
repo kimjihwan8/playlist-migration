@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 import { ArrowRight, Check, FileDown, Heart, ListMusic, Music2, RotateCcw } from 'lucide-react'
 import { BackLink } from '../../components/BackLink'
@@ -24,8 +24,25 @@ export function SelectTargetScreen() {
     destinations,
     targetPlatform,
     targetAccount,
+    result,
     set,
   } = useTransfer()
+
+  /**
+   * 이전이 끝난 뒤 이 화면에 다시 오면 **지난 타겟 선택을 비운다.**
+   *
+   * 어떤 경로로 왔든(뒤로 가기, 주소 직접 입력, '한 번 더 옮기기') 새 이전은
+   * 빈 상태에서 시작해야 한다. 지난 타겟이 골라져 있으면 타겟 목록 자체를 볼 수 없고,
+   * 더 나쁘게는 "어디로 가는지" 확인하지 않은 채 다음 이전을 시작하게 된다.
+   *
+   * 고른 재생목록(picks)은 그대로 둔다 — 같은 곡을 다른 곳으로 보내는 건 흔한 일이고,
+   * 그걸 다시 고르게 하는 건 불필요한 수고다.
+   */
+  useEffect(() => {
+    if (!result) return
+    set({ result: null, targetPlatform: null, targetAccount: null, destinations: {} })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result])
   const [connecting, setConnecting] = useState<PlatformId | null>(null)
 
   const chosen = pickedPlaylists(playlists, picks)
