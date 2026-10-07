@@ -100,6 +100,7 @@ export function transferRoutes(env: Env = loadEnv()) {
     if (!env.isProd) {
       record({
         at: new Date().toISOString(),
+        route: 'POST /transfer',
         totalMs: Date.now() - startedAt,
         steps,
         items: items.length,

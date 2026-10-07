@@ -36,6 +36,7 @@ export function debugRoutes(env: Env = loadEnv()) {
     return c.json(
       recent().map((t) => ({
         at: t.at,
+        route: t.route,
         totalMs: t.totalMs,
         steps: t.steps,
         items: t.items,

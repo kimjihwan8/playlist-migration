@@ -11,6 +11,8 @@ export type SpotifyCall = { method: string; path: string; ms: number; status: nu
 
 export type Trace = {
   at: string
+  /** 어느 요청이었나. 느린 구간을 찾으려면 이전 말고 다른 요청도 같이 봐야 한다. */
+  route: string
   totalMs: number
   steps: Record<string, number>
   items: number
