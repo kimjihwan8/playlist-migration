@@ -19,7 +19,14 @@ import { Stepper } from '../../components/Stepper'
 import { ApiError, fetchPlaylistTracks, fetchPlaylists } from '../../lib/api-client'
 import { platformById } from '../../lib/platforms'
 import { coverStyle } from '../../lib/cover'
-import { isPicked, isTrackPicked, pickedCount, totalPicked, type Pick } from '../../lib/selection'
+import {
+  checkboxState,
+  isPicked,
+  isTrackPicked,
+  pickedCount,
+  totalPicked,
+  type Pick,
+} from '../../lib/selection'
 import { useTransfer } from '../../lib/transfer-store'
 import type { Playlist } from '../../lib/types'
 import './browse.css'
@@ -161,7 +168,7 @@ export function BrowseSourceScreen() {
   const renderRow = (p: Playlist) => {
     const pick = picks[p.id]
     const count = pickedCount(p, pick)
-    const state = count === 0 ? 'off' : count === p.trackCount ? 'on' : 'partial'
+    const state = checkboxState(p, pick)
     const tracks = tracksByPlaylist[p.id]
     const open = expanded.has(p.id)
     const locked = isLocked(p)

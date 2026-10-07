@@ -36,6 +36,20 @@ export function pickedPlaylists(playlists: Playlist[], picks: Picks): Playlist[]
   return playlists.filter((p) => isPicked(picks[p.id]))
 }
 
+export type CheckboxState = 'on' | 'off' | 'partial'
+
+/**
+ * 체크박스가 보여줄 상태.
+ *
+ * **고른 개수가 아니라 고른 여부로 먼저 가른다.** 개수부터 보면 곡이 0개인 재생목록이
+ * 골랐는데도 꺼진 것처럼 보이고, 사용자는 안 고른 줄 알았던 재생목록이 다음 화면에
+ * 나타나는 걸 보게 된다 — 화면이 거짓말을 하는 셈이다.
+ */
+export function checkboxState(playlist: Playlist, pick: Pick | undefined): CheckboxState {
+  if (!isPicked(pick)) return 'off'
+  return pickedCount(playlist, pick) === playlist.trackCount ? 'on' : 'partial'
+}
+
 export function isTrackPicked(pick: Pick | undefined, trackId: string): boolean {
   if (!pick) return false
   return pick.mode === 'all' || pick.trackIds.includes(trackId)

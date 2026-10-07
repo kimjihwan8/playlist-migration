@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isPicked, pickedCount, pickedPlaylists, totalPicked } from '../src/lib/selection'
+import { checkboxState, isPicked, pickedCount, pickedPlaylists, totalPicked } from '../src/lib/selection'
 import type { Picks } from '../src/lib/selection'
 import type { Playlist } from '../src/lib/types'
 
@@ -73,5 +73,31 @@ describe('totalPicked', () => {
 
   it('아무것도 안 골랐으면 0', () => {
     expect(totalPicked([playlist()], {})).toBe(0)
+  })
+})
+
+describe('checkboxState — 화면이 거짓말하지 않게', () => {
+  it('고르지 않았으면 꺼짐', () => {
+    expect(checkboxState(playlist(), undefined)).toBe('off')
+  })
+
+  it('전부 고르면 켜짐', () => {
+    expect(checkboxState(playlist({ trackCount: 12 }), { mode: 'all' })).toBe('on')
+  })
+
+  it('일부만 고르면 중간 상태', () => {
+    expect(checkboxState(playlist({ trackCount: 12 }), { mode: 'partial', trackIds: ['t1'] })).toBe(
+      'partial',
+    )
+  })
+
+  it('곡이 0개인 재생목록도 고르면 켜져 보인다', () => {
+    // 개수로 먼저 가르면 여기서 'off' 가 나온다. 그러면 사용자는 안 고른 줄 알았던
+    // 재생목록이 다음 화면에 나타나는 걸 보게 된다 — 실제로 그 버그가 났다.
+    expect(checkboxState(playlist({ trackCount: 0 }), { mode: 'all' })).toBe('on')
+  })
+
+  it('고른 곡을 모두 해제하면 꺼짐', () => {
+    expect(checkboxState(playlist(), { mode: 'partial', trackIds: [] })).toBe('off')
   })
 })
