@@ -195,9 +195,28 @@ export function TransferScreen() {
   const freshFrom = seen.current
   seen.current = tracks.length
 
+  /** 처음부터 — 로그인까지 포함해 전부 비운다(다른 계정으로 갈아타는 경우). */
   const restart = () => {
     reset()
     navigate('/', { replace: true })
+  }
+
+  /**
+   * 한 번 더 이전 — **로그인은 유지하고 고른 것만 비운다.**
+   *
+   * 전체 초기화로 보내면 방금 끝낸 사람에게 다시 로그인을 시키게 되고,
+   * 반대로 아무것도 안 비우면 지난번 타겟이 그대로 골라져 있어 타겟 목록을 볼 수가 없다.
+   * 둘 다 틀렸으므로 중간이 필요하다.
+   */
+  const again = () => {
+    set({
+      picks: {},
+      destinations: {},
+      result: null,
+      targetPlatform: null,
+      targetAccount: null,
+    })
+    navigate('/source', { replace: true })
   }
 
   return (
@@ -362,8 +381,11 @@ export function TransferScreen() {
 
         {!running && (
           <div className="results-actions">
+            <button className="btn btn-primary" onClick={again}>
+              <RotateCcw size={16} /> 한 번 더 옮기기
+            </button>
             <button className="btn btn-ghost" onClick={restart}>
-              <RotateCcw size={16} /> 다시 하기
+              다른 계정으로
             </button>
           </div>
         )}
