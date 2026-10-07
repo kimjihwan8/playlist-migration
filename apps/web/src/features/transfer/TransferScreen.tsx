@@ -14,7 +14,7 @@ import {
 import { TopBar } from '../../components/TopBar'
 import { Footer } from '../../components/Footer'
 import { runTransfer, type Progress, type TransferItem } from '../../lib/api-client'
-import { destinationOf } from '../../lib/destination'
+import { destinationOf, needsAccount } from '../../lib/destination'
 import { platformById } from '../../lib/platforms'
 import { pickedPlaylists, totalPicked } from '../../lib/selection'
 import { useTransfer } from '../../lib/transfer-store'
@@ -136,7 +136,9 @@ export function TransferScreen() {
 
   const chosen = pickedPlaylists(playlists, picks)
   const expected = totalPicked(playlists, picks)
-  const ready = chosen.length > 0 && Boolean(targetPlatform && targetAccount)
+  // 계정이 없는 타겟(CSV)도 준비된 것이다. targetAccount 를 요구하면
+  // 파일로 내보내기를 고른 사람이 영원히 첫 화면으로 튕긴다.
+  const ready = chosen.length > 0 && Boolean(targetPlatform) && (!needsAccount(targetPlatform) || Boolean(targetAccount))
 
   const [progress, setProgress] = useState<Progress>({ done: 0, total: expected, tracks: [] })
   const [filter, setFilter] = useState<Filter>('all')
@@ -205,7 +207,7 @@ export function TransferScreen() {
             <h1>{running ? <>곡을 옮기고 있어요<em>...</em></> : '이전 결과'}</h1>
             <p>
               {targetPlatform ? platformById(targetPlatform).name : ''} ·{' '}
-              {targetAccount?.displayName} 계정
+              {targetAccount ? `${targetAccount.displayName} 계정` : '파일'}
               {chosen.length > 1 && ` · 재생목록 ${chosen.length}개`}
             </p>
           </div>

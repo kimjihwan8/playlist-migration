@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router'
-import { ArrowRight, Check, Heart, ListMusic, Music2, RotateCcw } from 'lucide-react'
+import { ArrowRight, Check, FileDown, Heart, ListMusic, Music2, RotateCcw } from 'lucide-react'
 import { BackLink } from '../../components/BackLink'
 import { TopBar } from '../../components/TopBar'
 import { Footer } from '../../components/Footer'
@@ -77,17 +77,23 @@ export function SelectTargetScreen() {
             </span>
           </div>
 
-          {connected && targetAccount && targetPlatform ? (
+          {connected && targetPlatform ? (
             <>
+              {/* 계정이 있는 타겟은 누구로 연결됐는지 보여주고, 파일 타겟은 고른 형식을 보여준다.
+                  targetAccount 를 조건에 넣으면 계정 없는 타겟이 영원히 이 화면에 못 들어온다. */}
               <div className="connected-target">
-                <span className="slot-avatar" style={{ background: targetAccount.avatar }}>
-                  <Check size={19} />
+                <span
+                  className="slot-avatar"
+                  style={targetAccount ? { background: targetAccount.avatar } : undefined}
+                >
+                  {targetAccount ? <Check size={19} /> : <FileDown size={18} />}
                 </span>
                 <div>
                   <strong>
-                    {platformById(targetPlatform).name} · {targetAccount.displayName}
+                    {platformById(targetPlatform).name}
+                    {targetAccount ? ` · ${targetAccount.displayName}` : ''}
                   </strong>
-                  <span>연결됨</span>
+                  <span>{targetAccount ? '연결됨' : '로그인이 필요 없어요'}</span>
                 </div>
                 <button
                   className="btn btn-ghost btn-sm"
