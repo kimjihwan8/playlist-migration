@@ -77,7 +77,15 @@ function ResultRow({ track, fresh }: { track: TrackResult; fresh: boolean }) {
                 {track.target.artist} · {track.target.album}
               </span>
             </div>
-            <a href={track.target.url} aria-label={`${track.target.title} 타겟에서 열기`}>
+            {/* 외부 서비스로 나가는 링크는 새 탭으로 연다 — 여기서 떠나면
+                 진행 중이던 결과(메모리에만 있다)가 날아간다.
+                 rel 은 새 탭이 원래 탭을 조작하지 못하게 막는다. */}
+            <a
+              href={track.target.url}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`${track.target.title} 타겟에서 열기 (새 탭)`}
+            >
               <ExternalLink size={16} />
             </a>
           </>
@@ -265,7 +273,13 @@ export function TransferScreen() {
                   <span className="created-action">내려받기</span>
                 </button>
               ) : (
-                <a className="created-row" key={d.label} href={d.url}>
+                <a
+                  className="created-row"
+                  key={d.label}
+                  href={d.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   {d.kind === 'liked' ? <Heart size={16} fill="currentColor" /> : <ListMusic size={16} />}
                   <span>{d.label}</span>
                   <ExternalLink size={15} />
