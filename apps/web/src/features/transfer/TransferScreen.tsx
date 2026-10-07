@@ -310,7 +310,7 @@ export function TransferScreen() {
               <div className="progress-value" style={{ width: `${donePct}%` }} />
             </div>
           </div>
-        ) : (
+        ) : result ? (
           <div className="created-list">
             <div className="created-title">곡이 담긴 곳 {result.destinations.length}개</div>
             {result.destinations.map((d) =>
@@ -337,7 +337,7 @@ export function TransferScreen() {
               ),
             )}
           </div>
-        )}
+        ) : null}
 
         <div className="count-row">
           <div className="count-item">
