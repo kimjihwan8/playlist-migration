@@ -277,3 +277,17 @@ button.created-row {
   background: var(--control-bg);
   color: var(--text-dim);
 }
+
+/* 이전 실패 안내. 진행률이 멈춘 채 끝나면 사용자는 끝난 건지 멈춘 건지 알 수 없다. */
+.transfer-failure {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: 10px;
+  background: var(--control-bg);
+  font-size: var(--text-sm);
+}
+.transfer-failure svg { flex: none; color: var(--accent); }

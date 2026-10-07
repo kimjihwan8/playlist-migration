@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { TopBar } from '../../components/TopBar'
 import { Footer } from '../../components/Footer'
-import { runTransfer, type Progress, type TransferItem } from '../../lib/api-client'
+import { ApiError, runTransfer, type Progress, type TransferItem } from '../../lib/api-client'
 import { coverStyle } from '../../lib/cover'
 import { destinationOf, needsAccount } from '../../lib/destination'
 import { platformById } from '../../lib/platforms'
@@ -156,6 +156,8 @@ export function TransferScreen() {
 
   const [progress, setProgress] = useState<Progress>({ done: 0, total: expected, tracks: [] })
   const [filter, setFilter] = useState<Filter>('all')
+  // 이전이 실패하면 사용자에게 알린다. 안 그러면 진행률이 멈춘 채로 끝난다.
+  const [failure, setFailure] = useState<string | null>(null)
   // 마지막에 도착한 행만 애니메이션을 준다
   const seen = useRef(0)
   // 이전은 한 번만 시작한다. 연결 상태를 확인하느라 effect 가 다시 돌아도 두 번 보내면 안 된다.
@@ -164,7 +166,6 @@ export function TransferScreen() {
   useEffect(() => {
     if (!ready || !targetPlatform || result || started.current) return
     started.current = true
-    let alive = true
 
     const items: TransferItem[] = chosen.map((p) => {
       const pick = picks[p.id]!
@@ -175,15 +176,28 @@ export function TransferScreen() {
       }
     })
 
-    runTransfer({ items, targetPlatform }, (p) => alive && setProgress(p)).then((done) => {
-      if (alive) set({ result: done })
-    })
-
-    return () => {
-      alive = false
-    }
+    /**
+     * **중간에 그만두지 않는다.**
+     *
+     * 보통은 cleanup 에서 `alive=false` 로 두고 결과를 버리지만, 여기서는 그러면 안 된다.
+     * 이 요청은 조회가 아니라 **이미 타겟에 재생목록을 만들어 버린 작업**이다.
+     * 결과를 버리면 서버에는 만들어졌는데 화면은 영원히 "진행 중"에 머문다.
+     *
+     * 특히 개발 모드의 StrictMode 는 마운트 직후 effect 를 한 번 더 돌리는데,
+     * 그 사이 cleanup 이 먼저 실행되어 **성공한 작업의 결과를 통째로 날렸다.**
+     * (중복 전송은 started 가 막으므로 여기서 또 막을 필요가 없다.)
+     *
+     * 언마운트 뒤 상태를 써도 괜찮다 — 쓰는 대상이 이 컴포넌트가 아니라
+     * 위에서 살아 있는 store 다.
+     */
+    runTransfer({ items, targetPlatform }, setProgress)
+      .then((done) => set({ result: done }))
+      .catch((err: unknown) => {
+        // 조용히 멈추면 "진행 중"에서 영원히 끝나지 않는다.
+        setFailure(err instanceof ApiError ? err.code : 'unknown')
+      })
     // ready 는 서버에 연결 상태를 묻고 나서야 true 가 된다 — 처음 한 프레임은 false 다.
-    // 그래서 []가 아니라 [ready]이고, 중복 실행은 started 가 막는다.
+    // 그래서 []가 아니라 [ready]이고, 중복 전송은 started 가 막는다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready])
 
@@ -266,7 +280,18 @@ export function TransferScreen() {
           </div>
         </div>
 
-        {running ? (
+        {failure && (
+          <p className="transfer-failure" role="alert">
+            <AlertCircle size={15} />
+            <span>
+              이전에 실패했어요{failure === 'not_connected' && ' — 계정 연결이 풀렸어요'}
+              {failure === 'not_readable' && ' — 가져올 수 없는 재생목록이 섞여 있어요'}. 다시
+              시도해 주세요.
+            </span>
+          </p>
+        )}
+
+        {running && !failure ? (
           <div className="progress-block">
             <div className="progress-label">
               <Loader2 size={15} className="spin" />

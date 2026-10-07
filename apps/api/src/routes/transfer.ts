@@ -100,7 +100,7 @@ export function transferRoutes(env: Env = loadEnv()) {
     if (!env.isProd) {
       record({
         at: new Date().toISOString(),
-        route: 'POST /transfer',
+        route: `POST /transfer → ${body.targetPlatform ?? 'spotify'}`,
         totalMs: Date.now() - startedAt,
         steps,
         items: items.length,
