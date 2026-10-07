@@ -19,7 +19,12 @@ export class NotConnectedError extends Error {
  * 토큰이 갱신되면 **쿠키를 다시 심는다**(onTokens). 안 하면 갱신한 토큰이
  * 이 요청이 끝나는 순간 사라지고 다음 요청이 또 만료 토큰으로 시작한다.
  */
-export async function adapterFor(c: Context, env: Env, role: Role): Promise<SpotifyAdapter> {
+export async function adapterFor(
+  c: Context,
+  env: Env,
+  role: Role,
+  onCall?: (method: string, path: string, ms: number, status: number) => void,
+): Promise<SpotifyAdapter> {
   const session = await getSession(c, env, role)
   if (!session) throw new NotConnectedError(role)
 
@@ -27,6 +32,7 @@ export async function adapterFor(c: Context, env: Env, role: Role): Promise<Spot
     clientId: env.spotifyClientId,
     tokens: session.tokens,
     onTokens: async (tokens) => setSession(c, env, role, { ...session, tokens }),
+    onCall,
   })
   return new SpotifyAdapter(http)
 }
@@ -41,7 +47,8 @@ export async function targetAdapterFor(
   c: Context,
   env: Env,
   platform: string,
+  onCall?: (method: string, path: string, ms: number, status: number) => void,
 ): Promise<TargetAdapter> {
   if (platform === 'csv') return new CsvTargetAdapter()
-  return adapterFor(c, env, 'target')
+  return adapterFor(c, env, 'target', onCall)
 }

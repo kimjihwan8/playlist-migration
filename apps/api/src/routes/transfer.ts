@@ -10,6 +10,7 @@ import {
   type WrittenDestination,
 } from '@pm/core'
 import { adapterFor, targetAdapterFor } from '../lib/adapters'
+import { record, step, type SpotifyCall } from '../lib/trace'
 import { loadEnv, type Env } from '../lib/env'
 
 /** 화면이 그대로 렌더링하는 모양. 내부 용어(ISRC)는 라벨링을 프론트에 맡긴다. */
@@ -41,11 +42,17 @@ export function transferRoutes(env: Env = loadEnv()) {
     const items = body.items ?? []
     if (items.length === 0) return c.json({ error: '옮길 재생목록이 없다' }, 400)
 
-    const source = await adapterFor(c, env, 'source')
-    const target = await targetAdapterFor(c, env, body.targetPlatform ?? 'spotify')
+    const startedAt = Date.now()
+    const steps: Record<string, number> = {}
+    const calls: SpotifyCall[] = []
+    const onCall = (method: string, path: string, ms: number, status: number) =>
+      void calls.push({ method, path, ms, status })
+
+    const source = await adapterFor(c, env, 'source', onCall)
+    const target = await targetAdapterFor(c, env, body.targetPlatform ?? 'spotify', onCall)
 
     // 설명에 넣을 원본 이름·소유자를 알아야 해서 목록을 한 번 읽는다.
-    const playlists = await source.listPlaylists()
+    const playlists = await step(steps, 'listPlaylists', () => source.listPlaylists())
 
     const destinations: WrittenDestination[] = []
     const tracks: TrackResult[] = []
@@ -63,7 +70,7 @@ export function transferRoutes(env: Env = loadEnv()) {
         )
       }
 
-      const all = await source.listTracks(item.playlistId)
+      const all = await step(steps, 'listTracks', () => source.listTracks(item.playlistId))
       const picked: SourceTrack[] =
         item.trackIds === 'all' ? all : all.filter((t) => item.trackIds.includes(t.id))
 
@@ -72,14 +79,31 @@ export function transferRoutes(env: Env = loadEnv()) {
        * 돌려봐야 전부 NOT_FOUND_IN_TARGET 으로 떨어지는데, 그건 거짓이다 —
        * 못 찾은 게 아니라 찾을 곳이 없는 것이다.
        */
-      const results = target.passthrough ? exportResults(picked) : await matchAll(picked, target)
+      const results = await step(steps, 'match', async () =>
+        target.passthrough ? exportResults(picked) : matchAll(picked, target),
+      )
       tracks.push(...results.map(toTrackResult))
 
       // 찾은 곡만, 원래 순서대로 쓴다.
       const found = results.flatMap((r) => (r.status === 'MATCHED' ? [r.target] : []))
       if (found.length > 0) {
-        destinations.push(await target.write(destinationFor(item, playlist.name, playlist.owner, playlist.kind), found))
+        destinations.push(
+          await step(steps, 'write', () =>
+            target.write(destinationFor(item, playlist.name, playlist.owner, playlist.kind), found),
+          ),
+        )
       }
+    }
+
+    if (!env.isProd) {
+      record({
+        at: new Date().toISOString(),
+        totalMs: Date.now() - startedAt,
+        steps,
+        items: items.length,
+        tracks: tracks.length,
+        calls,
+      })
     }
 
     return c.json({ destinations, tracks })

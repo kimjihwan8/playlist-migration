@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { adapterFor } from '../lib/adapters'
 import { loadEnv, type Env } from '../lib/env'
 import { getSession, isRole } from '../lib/session'
+import { recent } from '../lib/trace'
 
 /**
  * 개발 전용. Spotify 가 **실제로 무엇을 돌려주는지** 가공 없이 보여준다.
@@ -25,6 +26,30 @@ export function debugRoutes(env: Env = loadEnv()) {
     }
     return c.json(out)
   })
+
+  /**
+   * 최근 이전 작업의 측정 기록. **세션을 요구하지 않는다** —
+   * 성능 문제를 밖에서 확인할 수 있어야 하고, 여기에는 개인 데이터가 없다.
+   */
+  app.get('/transfers', (c) =>
+    c.json(
+      recent().map((t) => ({
+        at: t.at,
+        totalMs: t.totalMs,
+        steps: t.steps,
+        items: t.items,
+        tracks: t.tracks,
+        callCount: t.calls.length,
+        slowest: [...t.calls].sort((a, b) => b.ms - a.ms).slice(0, 5),
+        // 같은 경로를 몇 번 불렀는지 — 중복 호출이 여기서 드러난다.
+        byPath: t.calls.reduce<Record<string, number>>((acc, call) => {
+          const key = `${call.method} ${call.path.split('?')[0]}`
+          acc[key] = (acc[key] ?? 0) + 1
+          return acc
+        }, {}),
+      })),
+    ),
+  )
 
   /** 예: /api/debug/raw?path=/me/playlists?limit=5 */
   app.get('/raw', async (c) => {

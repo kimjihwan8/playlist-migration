@@ -34,6 +34,7 @@ export class SpotifyHttp {
   private readonly onTokens?: TokenSink
   private readonly maxAttempts: number
   private readonly wait: (ms: number) => Promise<unknown>
+  private readonly onCall?: (method: string, path: string, ms: number, status: number) => void
 
   constructor(opts: {
     clientId: string
@@ -42,12 +43,15 @@ export class SpotifyHttp {
     /** 일시적 실패를 몇 번까지 다시 시도할지 */
     maxAttempts?: number
     wait?: (ms: number) => Promise<unknown>
+    /** 호출이 나갈 때마다 불린다. 성능을 재려면 **호출 횟수**부터 알아야 한다. */
+    onCall?: (method: string, path: string, ms: number, status: number) => void
   }) {
     this.clientId = opts.clientId
     this.tokens = opts.tokens
     this.onTokens = opts.onTokens
     this.maxAttempts = opts.maxAttempts ?? 4
     this.wait = opts.wait ?? sleep
+    this.onCall = opts.onCall
   }
 
   currentTokens(): SpotifyTokens {
@@ -73,6 +77,7 @@ export class SpotifyHttp {
 
     for (let attempt = 0; ; attempt++) {
       let res: Response
+      const startedAt = Date.now()
       try {
         res = await fetch(path.startsWith('http') ? path : `${API}${path}`, {
           method,
@@ -83,11 +88,14 @@ export class SpotifyHttp {
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         })
       } catch (cause) {
+        this.onCall?.(method, path, Date.now() - startedAt, 0)
         // 응답조차 못 받았다 — 네트워크 실패는 언제나 일시적이다.
         if (attempt + 1 >= this.maxAttempts) throw cause
         await this.wait(backoffMs(attempt))
         continue
       }
+
+      this.onCall?.(method, path, Date.now() - startedAt, res.status)
 
       if (res.ok) return (await parse<T>(res))!
 
