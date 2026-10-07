@@ -265,3 +265,15 @@ button.created-row {
   color: var(--accent);
   font-size: var(--text-xs);
 }
+
+/* 매칭 결과의 앨범 커버. 원본·타겟 양쪽에 같은 크기로 둬야 눈이 나란히 비교한다. */
+.album-art {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 5px;
+  background: var(--control-bg);
+  color: var(--text-dim);
+}

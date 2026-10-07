@@ -14,6 +14,7 @@ import {
 import { TopBar } from '../../components/TopBar'
 import { Footer } from '../../components/Footer'
 import { runTransfer, type Progress, type TransferItem } from '../../lib/api-client'
+import { coverStyle } from '../../lib/cover'
 import { destinationOf, needsAccount } from '../../lib/destination'
 import { platformById } from '../../lib/platforms'
 import { pickedPlaylists, totalPicked } from '../../lib/selection'
@@ -51,6 +52,9 @@ function ResultRow({ track, fresh }: { track: TrackResult; fresh: boolean }) {
   return (
     <div className={`result-row${fresh ? ' fresh' : ''}`}>
       <div className="source-cell">
+        <span className="album-art" style={coverStyle(track.source.cover)} aria-hidden="true">
+          {!track.source.cover && <Music2 size={17} />}
+        </span>
         <div>
           <strong>{track.source.title}</strong>
           <span className="cell-sub">{track.source.artist}</span>
@@ -68,13 +72,15 @@ function ResultRow({ track, fresh }: { track: TrackResult; fresh: boolean }) {
           </span>
         ) : (
           <>
-            <span className="album-art" style={{ background: track.target.cover }}>
-              <Music2 size={17} />
+            {/* 커버는 URL 이다. CSS background 에 그대로 넣으면 무효가 되어 아무것도 안 보인다. */}
+            <span className="album-art" style={coverStyle(track.target.cover)} aria-hidden="true">
+              {!track.target.cover && <Music2 size={17} />}
             </span>
             <div>
               <strong>{track.target.title}</strong>
               <span className="cell-sub">
-                {track.target.artist} · {track.target.album}
+                {/* 앨범이 없는 곡이 있다 — 구분자만 덩그러니 남지 않게 함께 뺀다 */}
+                {[track.target.artist, track.target.album].filter(Boolean).join(' · ')}
               </span>
             </div>
             {/* 외부 서비스로 나가는 링크는 새 탭으로 연다 — 여기서 떠나면

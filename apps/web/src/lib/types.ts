@@ -48,17 +48,19 @@ export type MatchMethod = 'ISRC' | 'FUZZY_AUTO' | 'FUZZY_MANUAL' | 'EXPORT'
 
 export type FailureReason = 'NO_SOURCE_ISRC' | 'NOT_FOUND_IN_TARGET'
 
+type TrackView = { title: string; artist: string; cover: string | null }
+
 export type MatchedTrack = {
   status: 'MATCHED'
   method: MatchMethod
-  source: { title: string; artist: string }
-  target: { title: string; artist: string; album: string; cover: string; url: string }
+  source: TrackView
+  target: TrackView & { album: string | null; url: string }
 }
 
 export type FailedTrack = {
   status: 'FAILED'
   reason: FailureReason
-  source: { title: string; artist: string }
+  source: TrackView
 }
 
 export type TrackResult = MatchedTrack | FailedTrack

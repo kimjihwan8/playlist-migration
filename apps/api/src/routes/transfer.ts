@@ -14,14 +14,16 @@ import { record, step, type SpotifyCall } from '../lib/trace'
 import { loadEnv, type Env } from '../lib/env'
 
 /** 화면이 그대로 렌더링하는 모양. 내부 용어(ISRC)는 라벨링을 프론트에 맡긴다. */
+type TrackView = { title: string; artist: string; cover: string | null }
+
 type TrackResult =
   | {
       status: 'MATCHED'
       method: string
-      source: { title: string; artist: string }
-      target: { title: string; artist: string; album: string | null; cover: string | null; url: string }
+      source: TrackView
+      target: TrackView & { album: string | null; url: string }
     }
-  | { status: 'FAILED'; reason: string; source: { title: string; artist: string } }
+  | { status: 'FAILED'; reason: string; source: TrackView }
 
 type TransferItem = {
   playlistId: string
@@ -131,7 +133,7 @@ function destinationFor(
 }
 
 function toTrackResult(r: MatchResult): TrackResult {
-  const source = { title: r.source.title, artist: r.source.artist }
+  const source = { title: r.source.title, artist: r.source.artist, cover: r.source.cover }
   if (r.status === 'FAILED') return { status: 'FAILED', reason: r.reason, source }
   return { status: 'MATCHED', method: r.method, source, target: view(r.target) }
 }

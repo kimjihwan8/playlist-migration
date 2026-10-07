@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { adapterFor } from '../lib/adapters'
 import { loadEnv, type Env } from '../lib/env'
 import { getSession, isRole } from '../lib/session'
-import { recent } from '../lib/trace'
+import { recent, restore } from '../lib/trace'
 
 /**
  * 개발 전용. Spotify 가 **실제로 무엇을 돌려주는지** 가공 없이 보여준다.
@@ -31,8 +31,9 @@ export function debugRoutes(env: Env = loadEnv()) {
    * 최근 이전 작업의 측정 기록. **세션을 요구하지 않는다** —
    * 성능 문제를 밖에서 확인할 수 있어야 하고, 여기에는 개인 데이터가 없다.
    */
-  app.get('/transfers', (c) =>
-    c.json(
+  app.get('/transfers', async (c) => {
+    await restore()
+    return c.json(
       recent().map((t) => ({
         at: t.at,
         totalMs: t.totalMs,
@@ -48,8 +49,8 @@ export function debugRoutes(env: Env = loadEnv()) {
           return acc
         }, {}),
       })),
-    ),
-  )
+    )
+  })
 
   /** 예: /api/debug/raw?path=/me/playlists?limit=5 */
   app.get('/raw', async (c) => {
