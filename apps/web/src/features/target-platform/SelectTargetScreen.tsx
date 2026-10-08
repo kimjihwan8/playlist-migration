@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router'
+import { Navigate, useNavigate, useSearchParams } from 'react-router'
 import { ArrowRight, Check, FileDown, Heart, ListMusic, Music2, RotateCcw } from 'lucide-react'
 import { BackLink } from '../../components/BackLink'
 import { TopBar } from '../../components/TopBar'
@@ -29,18 +29,26 @@ export function SelectTargetScreen() {
   } = useTransfer()
 
   /**
-   * 이전이 끝난 뒤 이 화면에 다시 오면 **지난 타겟 선택을 비운다.**
+   * **이 화면은 언제나 타겟 목록부터 보여준다.**
    *
-   * 어떤 경로로 왔든(뒤로 가기, 주소 직접 입력, '한 번 더 옮기기') 새 이전은
-   * 빈 상태에서 시작해야 한다. 지난 타겟이 골라져 있으면 타겟 목록 자체를 볼 수 없고,
-   * 더 나쁘게는 "어디로 가는지" 확인하지 않은 채 다음 이전을 시작하게 된다.
+   * 예외는 하나뿐이다: OAuth 동의를 마치고 막 돌아온 경우(`?connected=1`).
+   * 그때는 방금 연결한 계정을 보여줘야 한다.
    *
-   * 고른 재생목록(picks)은 그대로 둔다 — 같은 곡을 다른 곳으로 보내는 건 흔한 일이고,
-   * 그걸 다시 고르게 하는 건 불필요한 수고다.
+   * 지난번 타겟을 되살리지 않는 이유 — 되살리면 목록 자체를 볼 수 없어서
+   * '바꾸기'를 거쳐야만 다른 타겟을 고를 수 있고, 더 나쁘게는 **어디로 가는지
+   * 확인하지 않은 채** 다음 이전을 시작하게 된다.
+   *
+   * 앞서 'result 가 있으면 비운다'로 고쳤다가 실패했다. 새로고침하면 result 는
+   * 메모리에서 사라지는데 targetPlatform 은 sessionStorage 에 남아 되살아났다.
+   * 그래서 '언제 비울까'가 아니라 '언제만 보여줄까'로 뒤집었다.
    */
+  const [params] = useSearchParams()
+  const justConnected = params.get('connected') === '1'
+  const [pickedNow, setPickedNow] = useState(justConnected)
+
   useEffect(() => {
-    if (!result) return
-    set({ result: null, targetPlatform: null, targetAccount: null, destinations: {} })
+    if (justConnected || !result) return
+    set({ result: null })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result])
   const [connecting, setConnecting] = useState<PlatformId | null>(null)
@@ -51,6 +59,7 @@ export function SelectTargetScreen() {
   const pick = async (id: PlatformId) => {
     // 파일로 내보내는 타겟은 연결할 계정이 없다 — 고르는 즉시 끝이다.
     if (!needsAccount(id)) {
+      setPickedNow(true)
       set({ targetPlatform: id, targetAccount: null })
       return
     }
@@ -66,7 +75,11 @@ export function SelectTargetScreen() {
   if (!hydrated) return null
   if (!sourcePlatform || chosen.length === 0) return <Navigate to="/?error=nothing_picked" replace />
 
-  const connected = Boolean(targetPlatform) && (!needsAccount(targetPlatform) || Boolean(targetAccount))
+  // 고른 적이 없으면(또는 OAuth 복귀가 아니면) 연결돼 있어도 목록을 보여준다.
+  const connected =
+    pickedNow &&
+    Boolean(targetPlatform) &&
+    (!needsAccount(targetPlatform) || Boolean(targetAccount))
 
   return (
     <div className="screen-shell">
@@ -114,7 +127,10 @@ export function SelectTargetScreen() {
                 </div>
                 <button
                   className="btn btn-ghost btn-sm"
-                  onClick={() => set({ targetPlatform: null, targetAccount: null })}
+                  onClick={() => {
+                    setPickedNow(false)
+                    set({ targetPlatform: null, targetAccount: null })
+                  }}
                 >
                   <RotateCcw size={13} /> 바꾸기
                 </button>

@@ -91,7 +91,9 @@ export function authRoutes(env: Env = loadEnv()) {
       },
     })
 
-    return c.redirect(landing[pkce.role])
+    // ?connected=1 은 "방금 이 왕복으로 연결됐다"는 표시다.
+    // 이게 없으면 화면은 그냥 들른 것과 OAuth 에서 돌아온 것을 구분할 수 없다.
+    return c.redirect(`${landing[pkce.role]}?connected=1`)
   })
 
   /**
