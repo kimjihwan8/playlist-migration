@@ -162,6 +162,8 @@ export function TransferScreen() {
   const seen = useRef(0)
   // 이전은 한 번만 시작한다. 연결 상태를 확인하느라 effect 가 다시 돌아도 두 번 보내면 안 된다.
   const started = useRef(false)
+  // 자동 내려받기는 한 번만. 다시 그려질 때마다 파일이 쌓이면 안 된다.
+  const downloaded = useRef(false)
 
   useEffect(() => {
     if (!ready || !targetPlatform || result || started.current) return
@@ -201,6 +203,19 @@ export function TransferScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready])
 
+  /**
+   * 파일로 내보낸 결과는 **끝나는 즉시 내려받는다.**
+   * 사용자가 원한 건 파일이지 "파일이 준비됐다는 안내"가 아니다.
+   * 브라우저가 자동 내려받기를 막는 경우가 있어 아래 버튼도 함께 남겨 둔다.
+   */
+  useEffect(() => {
+    if (!result || downloaded.current) return
+    const files = result.destinations.flatMap((d) => (d.download ? [d.download] : []))
+    if (files.length === 0) return
+    downloaded.current = true
+    files.forEach(download)
+  }, [result])
+
   if (!hydrated) return null
   if (!ready) return <Navigate to="/?error=nothing_picked" replace />
 
@@ -212,6 +227,7 @@ export function TransferScreen() {
   const donePct = pct(progress.done, progress.total || expected)
 
   const visible = filter === 'all' ? tracks : filter === 'matched' ? matched : failed
+  const files = result?.destinations.flatMap((d) => (d.download ? [d.download] : [])) ?? []
   const freshFrom = seen.current
   seen.current = tracks.length
 
@@ -315,13 +331,11 @@ export function TransferScreen() {
             <div className="created-title">곡이 담긴 곳 {result.destinations.length}개</div>
             {result.destinations.map((d) =>
               d.download ? (
-                /* 파일은 열 주소가 없다. 응답에 실려 온 내용을 그 자리에서 Blob 으로 만들어 내려준다
-                   — 서버가 파일을 들고 있을 이유가 없고, P1 에 저장소가 없다는 사실과도 맞는다. */
-                <button className="created-row" key={d.label} onClick={() => download(d.download!)}>
+                /* 파일은 누를 것이 아니라 결과의 설명이다. 내려받기는 아래 주 버튼이 맡는다. */
+                <div className="created-row" key={d.label}>
                   <FileDown size={16} />
                   <span>{d.download.filename}</span>
-                  <span className="created-action">내려받기</span>
-                </button>
+                </div>
               ) : (
                 <a
                   className="created-row"
@@ -412,7 +426,13 @@ export function TransferScreen() {
 
         {!running && (
           <div className="results-actions">
-            <button className="btn btn-primary" onClick={again}>
+            {files.length > 0 && (
+              <button className="btn btn-primary" onClick={() => files.forEach(download)}>
+                <FileDown size={16} />
+                {files.length > 1 ? `파일 ${files.length}개 다시 내려받기` : 'CSV 다시 내려받기'}
+              </button>
+            )}
+            <button className={files.length > 0 ? 'btn btn-ghost' : 'btn btn-primary'} onClick={again}>
               <RotateCcw size={16} /> 한 번 더 옮기기
             </button>
             <button className="btn btn-ghost" onClick={restart}>
